@@ -8,8 +8,8 @@ this file carries summary lines only. See core `id:e65e` for the umbrella item.
 - [x] INV1 (id:82a2) — drives lane → `inventory/drives/<id>.md`, shipped v0.2.0. See ROADMAP.
 - [x] INV2 (id:5697) — devices lane → `inventory/devices/<id>.md` + searchable status, shipped v0.2.0. See ROADMAP.
 - [x] INV-FIX (id:86b5) — v1 correctness fixes: amender-clobber idempotence, per-record date, id validation, table escaping (Fable review). Shipped v0.3.0. See ROADMAP + docs/fable-session-review-2026-07-11.md.
-- [ ] INV3 (id:46b6) — find-dump drive-content index (lane-c). Design DONE (docs/inv3-lane-c-design.md); sub-items INV3a(core)/INV3b/INV3c/INV3d. Packaging = separate plugin `inventory-finddump`. Storage tier 🚧 GATED on INV3-PILOT. See ROADMAP.
-- [ ] INV3-PILOT — measure a real HDD's file count/size (scripts/pilot-drive-count.sh) to pick the listing storage tier. HUMAN-run (needs a drive plugged in). Gates INV3b–d.
+- [ ] INV3 (id:46b6) — find-dump drive-content index (lane-c). Design DONE; sub-items INV3a(core)/INV3b/INV3c/INV3d. Packaging = separate plugin `inventory-finddump`. Storage = T1-git shards (RATIFIED default) + prune globs; annex escape-hatch evidence-gated. INV3b UN-GATED (dispatch after INV3a). See ROADMAP.
+- [ ] INV3-PILOT — measure a real HDD's file count/size (scripts/pilot-drive-count.sh) to CALIBRATE the annex flip-threshold + prune globs. HUMAN-run. Does NOT gate INV3b.
 
 ## Deferred
 

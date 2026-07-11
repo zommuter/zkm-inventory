@@ -80,21 +80,23 @@ Shared rules for every item below:
   **Decisions (this session):** packaging = a SEPARATE plugin `inventory-finddump` (multi-doc
   `plugin.yaml`, `zkm convert inventory-finddump`) so the light manifest render stays fast;
   mount-identity = read-only filesystem UUID/label (NO marker-file — honors the no-write-to-drives
-  fence); dense opt-out = config path-prefix skip. **Storage tier for the listing shards is
-  🚧 GATED ON AN HDD-CONTENT PILOT** (see below) — pilot ≥1 real drive's file count/size before
-  committing to T1-git-shards vs annex-raw+thin-summary. Do NOT dispatch INV3b–d until v1 is green
-  (✅ it is) AND the pilot resolves the storage tier. INV3a may proceed independently.
+  fence); dense+amender opt-out = config path-prefix skip (core INV3a id:8fb4). **Storage tier =
+  T1 git-tracked shards — RATIFIED DEFAULT (2026-07-11)** + per-drive prune/exclude globs; the
+  annex-raw+thin-summary path is an EVIDENCE-GATED escape-hatch, built ONLY if a real drive exceeds
+  ~1M files / ~100 MB raw listing (Fable review). **INV3b (the shard renderer) is UN-GATED** — it
+  ships identically under either storage outcome; gating it on the pilot would itself violate
+  observe-before-preventing. Only the annex escape-hatch waits on evidence. Dispatch order once
+  INV3a lands: **INV3b (un-gated now that v1 ✅) → INV3c → INV3d**; the pilot merely CALIBRATES the
+  flip-to-annex threshold + prune globs, it does not gate.
 
-## Pilot (gates INV3 storage tier)
+## Pilot (CALIBRATES the annex threshold — does NOT gate INV3b)
 
-- [ ] **INV3-PILOT — measure real HDD contents before choosing the listing storage tier.** Mount
-  ≥1 real external drive and measure file count + total listing size (e.g.
-  `find <mount> -type f | wc -l` and a `path\tsize\tmtime` line-size estimate) to learn whether
-  T1-git shards (~80 B/line, delta-cheap; heavy only at multi-million files) are viable or a
-  drive is large enough to want annex-raw + thin-git-summary. This is a HUMAN-run pilot (needs a
-  physical drive plugged in). A helper script is at `scripts/pilot-drive-count.sh`. Feeds the
-  storage-tier decision in `docs/inv3-lane-c-design.md` §Q2 / HUMAN DECISION #1. INV3b–d are
-  gated on this.
+- [ ] **INV3-PILOT — measure real HDD contents to calibrate the annex flip-threshold + prune globs.**
+  Mount ≥1 real external drive and measure file count + total listing size
+  (`scripts/pilot-drive-count.sh <mount>`) to tune where T1-git-shards flip to
+  annex-raw+thin-summary (default threshold ~1M files / ~100 MB) and which prune/exclude globs
+  are worth it. HUMAN-run (needs a physical drive). **Calibration only — INV3b ships regardless**
+  (T1-git is the ratified default). Feeds `docs/inv3-lane-c-design.md` §Q2.
 
 ## Deferred / dormant (not dispatchable yet)
 
