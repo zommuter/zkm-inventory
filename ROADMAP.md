@@ -38,7 +38,7 @@ Shared rules for every item below:
   INV1 helpers (shared record→md rendering). **Done-check:**
   `uv run pytest tests/test_inventory.py -k "device or dust"` green, then FULL suite green.
 
-- [ ] **INV-FIX — v1 correctness fixes (convert↔amender clobber, global date, id validation, table escaping)** [ROUTINE] <!-- id:86b5 -->
+- [x] **INV-FIX — v1 correctness fixes (convert↔amender clobber, global date, id validation, table escaping)** [ROUTINE] <!-- id:86b5 -->
   Fable review (2026-07-11) found 4 real bugs the green v1 tests miss. Fix ALL, each with a NEW red test:
   1. **Amender-preserving idempotence (#5, the important one):** `_write_record` byte-compares a
      record-only render, so any amender frontmatter write-back (zkm-ner entities/tags) is CLOBBERED on

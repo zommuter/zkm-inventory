@@ -85,3 +85,20 @@ table. Also: find-dump shards must skip the AMENDER leg too (id:63bb), not just 
 Storage-tier opinion: T1-git default, flip to annex-raw+thin-summary at ~1M files / ~100 MB raw
 listing, add per-drive prune/exclude globs; pilot should CALIBRATE the threshold, not GATE INV3b
 (the shard renderer ships either way). Surfaced to the human for ratification.
+
+## 2026-07-11 — executor (Sonnet)
+
+Worked id:86b5 (INV-FIX) — fixed all 4 v1 correctness bugs the Fable review found, each with a
+new RED test confirmed failing before the fix: `test_amender_frontmatter_survives_reconvert`
+(bug #1, amender-clobber), `test_editing_one_record_changes_only_that_file` (bug #2, per-record
+date), `test_missing_id_raises_clear_error` + `test_path_escaping_id_cannot_escape_lane_dir` +
+`test_duplicate_ids_raise` (bug #3, id validation), `test_pipe_in_value_does_not_break_table`
+(bug #4, table escaping). `_write_record` now reads any existing doc and preserves frontmatter
+this plugin doesn't own (entities outside `scope:inventory.<kind>`, tags outside the devices
+lane's fixed status vocabulary) before comparing/writing the merged result. Dropped the
+manifest-mtime `date` entirely; a record now gets a `date` only if it explicitly supplies one.
+`id` is now validated (required, no `/`/`\`/`..`, unique per lane) before use as a filename.
+Table cells escape `|` and newlines. All 8 original tests still green, all 14 tests green,
+ruff clean. Bumped to v0.3.0 (frontmatter output shape changed: `date` no longer stamped on
+every record) and tagged. Friction: none — the 4 bugs and their fixes were each independently
+verifiable against a single RED test; no ambiguity encountered.

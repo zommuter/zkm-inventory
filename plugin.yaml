@@ -1,5 +1,5 @@
 name: inventory
-version: 0.2.0
+version: 0.3.0
 description: Convert a hand-authored asset-inventory manifest (external drives + hardware/RPis/IoT) to searchable markdown with typed inventory entities
 license: MIT
 
