@@ -223,6 +223,99 @@ def test_fd_backend_matches_pathspec_backend_when_available(tmp_path: Path, monk
     assert {e[0] for e in entries_fd} == {e[0] for e in entries_pathspec}
 
 
+# --- INV3d: git-annex pointer exclusion (leg-disjointness, design §Q6) -----
+#
+# git-annex represents annexed content as a symlink whose target resolves
+# through an `annex/objects` path segment into the annex object store. The
+# find-dump sweep (lane-c) must exclude these -- lane-a (the future `git
+# annex whereis` seam) already covers them -- so an annexed file is never
+# double-reported by both legs. Detection must work on a BROKEN pointer too
+# (target need not exist -- a drive whose annex content isn't present must
+# still have its pointer recognized and excluded), and identically regardless
+# of scan backend.
+
+
+def test_annex_pointer_symlinks_excluded_normal_symlink_included(tmp_path: Path):
+    root = tmp_path / "drive"
+    _make_tree(root)
+
+    # A normal symlink to a regular (non-annex) file must be INCLUDED.
+    real_file = root / "Videos" / "blade-runner-2049.mkv"
+    normal_link = root / "Videos" / "blade-runner-2049-link.mkv"
+    normal_link.symlink_to(real_file.name)
+
+    # git-annex pointer symlink, RELATIVE target through annex/objects.
+    # Target need NOT exist on disk.
+    annex_link_rel = root / "Videos" / "annexed-relative.mkv"
+    annex_link_rel.symlink_to(
+        "../../.git/annex/objects/XX/YY/SHA256E-s123--deadbeef/annexed-relative.mkv"
+    )
+
+    # git-annex pointer symlink, ABSOLUTE target through annex/objects.
+    annex_link_abs = root / "Videos" / "annexed-absolute.mkv"
+    annex_link_abs.symlink_to(
+        "/mnt/other-drive/.git/annex/objects/AA/BB/SHA256E-s456--cafebabe/annexed-absolute.mkv"
+    )
+
+    # git-annex pointer symlink whose target actually RESOLVES (not broken) --
+    # must be excluded on detection alone, never merely because the target is
+    # missing (the naive "stat-follow fails on a broken link" accident would
+    # miss this case).
+    annex_objects_dir = root / ".git" / "annex" / "objects" / "ZZ" / "WW"
+    annex_objects_dir.mkdir(parents=True)
+    (annex_objects_dir / "SHA256E-s789--realcontent.mkv").write_text("real annexed bytes")
+    annex_link_resolving = root / "Videos" / "annexed-resolving.mkv"
+    annex_link_resolving.symlink_to(
+        "../.git/annex/objects/ZZ/WW/SHA256E-s789--realcontent.mkv"
+    )
+
+    store = tmp_path / "store"
+    fd.convert(store, _drives_config(root))
+
+    bodies = _shard_bodies(store, "example-media")
+    haystack = "\n".join(bodies.values())
+
+    assert "blade-runner-2049-link.mkv" in haystack, "normal symlink must be included"
+    assert "annexed-relative.mkv" not in haystack, (
+        "relative-target annex pointer symlink must be excluded"
+    )
+    assert "annexed-absolute.mkv" not in haystack, (
+        "absolute-target annex pointer symlink must be excluded"
+    )
+    assert "annexed-resolving.mkv" not in haystack, (
+        "an annex pointer whose target actually resolves must still be excluded"
+    )
+    assert "realcontent.mkv" not in haystack, (
+        "the .git/annex/objects internals themselves must never be swept"
+    )
+
+
+def test_is_annex_pointer_symlink_helper_relative_and_absolute(tmp_path: Path):
+    root = tmp_path / "drive"
+    root.mkdir()
+
+    relative_link = root / "relative-pointer"
+    relative_link.symlink_to("../../.git/annex/objects/XX/YY/SHA256E-s1--abc/file")
+
+    absolute_link = root / "absolute-pointer"
+    absolute_link.symlink_to("/mnt/x/.git/annex/objects/AA/BB/SHA256E-s2--def/file")
+
+    normal_file = root / "normal.txt"
+    normal_file.write_text("hi")
+
+    normal_link = root / "normal-link.txt"
+    normal_link.symlink_to("normal.txt")
+
+    broken_non_annex_link = root / "broken-non-annex"
+    broken_non_annex_link.symlink_to("does-not-exist.txt")
+
+    assert fd._is_annex_pointer_symlink(relative_link) is True
+    assert fd._is_annex_pointer_symlink(absolute_link) is True
+    assert fd._is_annex_pointer_symlink(normal_file) is False
+    assert fd._is_annex_pointer_symlink(normal_link) is False
+    assert fd._is_annex_pointer_symlink(broken_non_annex_link) is False
+
+
 # --- INV3c: mount orchestration + online-set resolution ---------------------
 #
 # A configured drive may declare `mount: {uuid?, label?}` + `content_roots:

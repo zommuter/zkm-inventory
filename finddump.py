@@ -45,7 +45,7 @@ import pathspec
 from zkm.atomic import write_atomic
 
 PLUGIN_NAME = "inventory-finddump"
-PLUGIN_VERSION = "0.5.0"
+PLUGIN_VERSION = "0.6.0"
 
 
 def _validate_id(record: dict, kind: str, seen_ids: set[str]) -> str:
@@ -263,9 +263,56 @@ def _list_files(root: Path, backend: str | None = None) -> list[tuple[str, int, 
     return sorted(_list_files_pathspec(root))
 
 
+def _is_annex_pointer_symlink(path: Path) -> bool:
+    """True iff *path* is a git-annex pointer symlink (design §Q6, INV3d).
+
+    git-annex represents annexed file content as a symlink whose target
+    resolves through an ``annex/objects`` path segment (bare repos use
+    ``annex/objects``, working trees ``.git/annex/objects``) into the annex
+    object store. Detected via the RAW ``os.readlink`` target string — never
+    via ``Path.resolve()``/``.exists()`` — so a **broken** annex pointer (the
+    annex object store not present on this drive/host) is still recognized
+    and excluded; only lane-a (the future `git annex whereis` seam) is
+    responsible for annexed content, never lane-c (find-dump). Works for
+    both relative and absolute targets. Returns ``False`` (never raises) for
+    a non-symlink, an unreadable symlink, or a plain non-annex symlink
+    (including a broken one) — those are left to the caller's normal
+    stat-based inclusion/exclusion.
+    """
+    try:
+        target = os.readlink(path)
+    except OSError:
+        return False
+    target_posix = target.replace(os.sep, "/")
+    return "annex/objects" in target_posix
+
+
+def _build_entry(root: Path, rel: str) -> tuple[str, int, int] | None:
+    """Build a ``(relpath, size, mtime_epoch)`` entry for *rel* under *root*.
+
+    Shared by both scan backends (fd + pathspec) so the git-annex-pointer
+    exclusion (INV3d) is applied IDENTICALLY regardless of which backend
+    surfaced the path — `fd --type f` may or may not surface a symlink
+    depending on flags, so this post-filter is the single source of truth,
+    not a backend-specific detail. Returns ``None`` when the entry should be
+    dropped: it is an annex pointer symlink (excluded on detection alone,
+    never merely because a broken target fails to stat), or the path is
+    otherwise unreadable (broken non-annex symlink, permission error, race
+    with a deleted file).
+    """
+    full = root / rel
+    if _is_annex_pointer_symlink(full):
+        return None
+    try:
+        st = full.stat()
+    except OSError:
+        return None
+    return (rel, st.st_size, int(st.st_mtime))
+
+
 def _list_files_fd(root: Path, fd_bin: str) -> list[tuple[str, int, int]]:
     proc = subprocess.run(
-        [fd_bin, "--type", "f", "--strip-cwd-prefix"],
+        [fd_bin, "--type", "f", "--type", "l", "--strip-cwd-prefix"],
         cwd=root,
         capture_output=True,
         text=True,
@@ -277,12 +324,9 @@ def _list_files_fd(root: Path, fd_bin: str) -> list[tuple[str, int, int]]:
         if not rel:
             continue
         rel = rel.replace(os.sep, "/")
-        full = root / rel
-        try:
-            st = full.stat()
-        except OSError:
-            continue
-        results.append((rel, st.st_size, int(st.st_mtime)))
+        entry = _build_entry(root, rel)
+        if entry is not None:
+            results.append(entry)
     return results
 
 
@@ -303,12 +347,9 @@ def _list_files_pathspec(root: Path) -> list[tuple[str, int, int]]:
             rel = (rel_dir / f).as_posix() if str(rel_dir) != "." else f
             if spec.match_file(rel):
                 continue
-            full = Path(dirpath) / f
-            try:
-                st = full.stat()
-            except OSError:
-                continue
-            results.append((rel, st.st_size, int(st.st_mtime)))
+            entry = _build_entry(root, rel)
+            if entry is not None:
+                results.append(entry)
     return results
 
 

@@ -199,3 +199,50 @@ UUID,LABEL,MOUNTPOINT -P -n` output shape on this host first (`UUID="..." LABEL=
 MOUNTPOINT="..."` per line, `-n` a no-op with `-P`) before writing the parser, so the
 production path should hold up under the reviewer's planned live-verify against a real
 mounted SSD.
+
+## 2026-07-11 — executor (sonnet)
+
+Worked id:46b6 sub-item INV3d — git-annex pointer exclusion (leg-disjointness, design
+§Q6). Added `_is_annex_pointer_symlink(path)`: detects a symlink via the RAW
+`os.readlink()` target string containing an `annex/objects` segment (relative or
+absolute target; deliberately does NOT follow/resolve, so a **broken** annex pointer —
+the annex object store not present on this drive — is still recognized and excluded).
+Added `_build_entry(root, rel)` as the single backend-agnostic post-filter: both
+`_list_files_fd()` and `_list_files_pathspec()` now route every candidate path through
+it, so the exclusion is IDENTICAL regardless of which scan backend surfaced the path
+(per the design doc's note that `fd --type f` may or may not surface a given symlink
+depending on flags — `fd` invocation extended to `--type f --type l` so it explicitly
+requests symlinks too, giving the post-filter something to see on that backend). A
+normal symlink to a regular non-annex file is still included. RED first: added
+`test_annex_pointer_symlinks_excluded_normal_symlink_included` (relative-target broken
+pointer, absolute-target broken pointer, AND a genuinely-*resolving* annex pointer —
+the last one catches the naive "stat-follow just happens to fail on a broken link"
+false-pass, which the first two cases alone didn't) and
+`test_is_annex_pointer_symlink_helper_relative_and_absolute` (direct unit coverage of
+the helper, including a broken non-annex symlink returning `False`). Both genuinely RED
+before the fix (confirmed via `pytest -k annex_pointer`), GREEN after. Full suite: 31
+passed / 1 skipped (up from 29 passed / 1 skipped; the 1 skip is the optional real-`fd`
+backend-parity test, `fd`/`fdfind` absent on this host). `ruff check finddump.py
+tests/` clean. Bumped 0.5.0 → 0.6.0 (behavior change: new exclusion) across
+`pyproject.toml`, both `plugin.yaml` docs, and `PLUGIN_VERSION` in both `convert.py`
+and `finddump.py`; `uv lock` regenerated; tagged `v0.6.0`.
+
+`git ls-files` tracked-only listing (the ROADMAP's secondary, optional ask) was
+evaluated and DEFERRED, not built: `fd`'s default `.gitignore`+hidden-dir skip (and the
+pathspec fallback's matching `.*` rule) already excludes `.git` internals for every
+tested case; adding a nested-git-repo detection pass would be net-new complexity for no
+observable behavioral gain over what's already shipped. Left as a note on the item for
+a future session if a real repo-inside-drive case demands finer tracked/untracked
+granularity.
+
+Ticked id:46b6 (INV3) itself as fully complete: all four sub-items are now done —
+INV3a is core item id:8fb4, confirmed already shipped in `~/src/zkm` (zkm v0.17.0,
+`dense_skip_prefixes`/`amender_skip_prefixes`), INV3b v0.4.0, INV3c v0.5.0, INV3d
+v0.6.0 (this session). INV3-PILOT (calibration, human-run) stays open — it never gated
+INV3 per the ROADMAP's own wording.
+
+Friction: none of substance. The relative-symlink-target math needed a second look
+(a target under `Videos/annexed-resolving.mkv` needs `../` not `../../` to reach a
+sibling `.git/` at the drive root) — caught it myself when the "resolving" RED case
+unexpectedly passed on the first (miscomputed-target) attempt, before touching
+production code.

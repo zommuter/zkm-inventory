@@ -62,7 +62,7 @@ Shared rules for every item below:
      renders without breaking the table and remains searchable.
   **Bump minor → 0.3.0** (frontmatter output shape changes: `date` dropped). Full suite green + ruff.
 
-- [ ] **INV3 — find-dump drive-content index (lane-c, fast-follow)** [HARD] 🚧 GATED <!-- id:46b6 -->
+- [x] **INV3 — find-dump drive-content index (lane-c, fast-follow)** [HARD] <!-- id:46b6 -->
   Mount each drive + record its file listing (paths/sizes/mtimes) → searchable per-drive
   content so `zkm search "<title>"` names which drive holds a file. **git-annex INDEPENDENT**
   (covers bulk non-annex content). **Design pass DONE 2026-07-11 → `docs/inv3-lane-c-design.md`.**
@@ -99,7 +99,26 @@ Shared rules for every item below:
     by `uuid` (exact) OR `label` (case-insensitive); an unmatched/offline drive is skipped
     (no raise, prior shards untouched); explicit `roots:` still bypasses mount resolution
     entirely (INV3b unchanged).
-  - **INV3d** — (small/optional) annex-pointer exclusion (leg-disjointness) + staleness legibility.
+  - [x] **INV3d** — annex-pointer exclusion (leg-disjointness). **Shipped v0.6.0**:
+    `_is_annex_pointer_symlink()` detects a symlink whose raw `os.readlink()` target
+    contains an `annex/objects` path segment (relative OR absolute, target need NOT
+    exist — a broken pointer on a drive without the annex object store present is
+    still recognized and excluded); `_build_entry()` applies it as a single
+    backend-agnostic post-filter shared by both `_list_files_fd()` and
+    `_list_files_pathspec()`, so behavior is identical regardless of which scan
+    backend surfaced the path (`fd --type f --type l` now explicitly requests
+    symlinks so the filter has something to see on that backend too). A NORMAL
+    symlink to a regular (non-annex) file is still included. `git ls-files`
+    tracked-only listing (the ROADMAP's optional secondary) is DEFERRED, not
+    built: `fd`'s default `.gitignore`+hidden-dir skip (and the pathspec
+    fallback's matching `.*` rule) already excludes `.git` internals, so a
+    tracked-only mode would add complexity (a nested-git-repo detection pass)
+    for no behavioral gain over what's already shipped — revisit only if a real
+    repo-inside-drive case needs finer-grained tracked/untracked distinction.
+    Staleness legibility (the ROADMAP's other optional secondary) was not
+    scoped by this session's dispatch — `last_swept` on the per-drive summary
+    already carries the freshness signal; a dedicated staleness UI/warning is
+    left for a future item if wanted.
 
   **Decisions (this session):** packaging = a SEPARATE plugin `inventory-finddump` (multi-doc
   `plugin.yaml`, `zkm convert inventory-finddump`) so the light manifest render stays fast;

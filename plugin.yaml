@@ -1,5 +1,5 @@
 name: inventory
-version: 0.5.0
+version: 0.6.0
 description: Convert a hand-authored asset-inventory manifest (external drives + hardware/RPis/IoT) to searchable markdown with typed inventory entities
 license: MIT
 
@@ -17,7 +17,7 @@ config:
 
 ---
 name: inventory-finddump
-version: 0.5.0
+version: 0.6.0
 description: Sweep configured drive content-roots (fd/pathspec scan+ignore adapter) into searchable per-drive find-dump markdown shards
 license: MIT
 module: finddump
