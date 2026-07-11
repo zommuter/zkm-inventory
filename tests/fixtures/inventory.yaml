@@ -1,0 +1,35 @@
+# Published-generic fixture — placeholder assets only, NO real personal data.
+# Top-level `drives:` and `devices:` lists; each record has a stable `id`.
+drives:
+  - id: example-media
+    label: "Example Media Drive"
+    capacity_gb: 4000
+    fs: ext4
+    location: "example shelf"
+    purpose: "example media archive"
+    data_classes: [movies, photos]
+    last_sync: 2026-01-01
+    offsite: false
+  - id: example-backup
+    label: "Example Backup Drive"
+    capacity_gb: 2000
+    fs: btrfs
+    location: "example offsite box"
+    purpose: "example offsite backup"
+    data_classes: [backups]
+    last_sync: 2026-01-02
+    offsite: true
+
+devices:
+  - id: pi-example
+    kind: raspberry-pi
+    model: "Raspberry Pi 4B (example)"
+    location: "example living room"
+    status: in-use
+    purpose: "example media player"
+  - id: pi-idle-example
+    kind: raspberry-pi
+    model: "Raspberry Pi 3B (example)"
+    location: "example drawer"
+    status: dust-collecting
+    purpose: "example currently unused"

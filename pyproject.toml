@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "zkm-inventory"
+version = "0.1.0"
+description = "zkm plugin: convert a hand-authored asset-inventory manifest (drives + hardware) to searchable markdown"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [{name = "Tobias Kienzler", email = "zommuter@googlemail.com"}]
+keywords = ["knowledge-management", "markdown", "inventory", "assets", "hardware", "storage"]
+readme = "README.md"
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business",
+    "Topic :: System :: Archiving",
+    "Topic :: Text Processing",
+    "Typing :: Typed",
+]
+dependencies = [
+    "python-frontmatter>=1.1",
+    "pyyaml>=6",
+    "zkm>=0.16,<1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/zommuter/zkm"
+Repository = "https://github.com/zommuter/zkm-inventory"
+Issues = "https://github.com/zommuter/zkm-inventory/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "ruff>=0.4",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+include = ["convert.py", "plugin.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.uv.sources]
+zkm = { path = "../../", editable = true }

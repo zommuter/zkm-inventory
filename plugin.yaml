@@ -1,0 +1,16 @@
+name: inventory
+version: 0.1.0
+description: Convert a hand-authored asset-inventory manifest (external drives + hardware/RPis/IoT) to searchable markdown with typed inventory entities
+license: MIT
+
+conformance:
+  config:
+    manifest: tests/fixtures/inventory.yaml
+
+creates_dirs:
+  - inventory
+
+config:
+  manifest:
+    required: true
+    description: Path to the hand-authored YAML inventory manifest (top-level `drives:` and `devices:` lists). Relative paths resolve against the store root.
