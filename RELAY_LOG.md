@@ -70,3 +70,18 @@ opt-out = config path-prefix. **Storage tier is GATED on an HDD-content pilot** 
 vs annex-raw+thin-summary. INV3b–d gated on that pilot; INV3a independent/dispatchable now. The
 NER-amender-trips-on-md-tables finding (from the executor's CLI smoke test) is routed to zkm-ner.
 A Fable pass will sanity-review this session's decisions.
+
+## 2026-07-11 22:45 — reviewer (claude-fable-5 review, integrated by opus)
+
+Fable red-team of the session (`docs/fable-session-review-2026-07-11.md`) confirmed the scope/design
+decisions (KEEP) but found 4 REAL v1 correctness bugs the green tests miss → filed as INV-FIX
+(id:86b5), ship-before-real-use: (#5) `_write_record` byte-compares a record-only render so amender
+frontmatter write-backs are CLOBBERED next convert → churn cycle (verified src/zkm/amendments.py) —
+this, NOT the NER-table bug alone, is the idempotence root cause; (#6a) `date` = manifest mtime stamped
+on every record → editing one record rewrites ALL, destroying the per-record temporal signal; (#6b)
+`record["id"]` raw → KeyError / `../` path escape / dup collision; (#6d) `|` in a value breaks the
+table. Also: find-dump shards must skip the AMENDER leg too (id:63bb), not just the dense leg → INV3a
+(core id:8fb4) extended with `amender_skip_prefixes`. Closed central id:f22d (subsumed by e65e).
+Storage-tier opinion: T1-git default, flip to annex-raw+thin-summary at ~1M files / ~100 MB raw
+listing, add per-drive prune/exclude globs; pilot should CALIBRATE the threshold, not GATE INV3b
+(the shard renderer ships either way). Surfaced to the human for ratification.

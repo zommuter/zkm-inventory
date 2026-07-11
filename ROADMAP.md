@@ -38,6 +38,30 @@ Shared rules for every item below:
   INV1 helpers (shared record→md rendering). **Done-check:**
   `uv run pytest tests/test_inventory.py -k "device or dust"` green, then FULL suite green.
 
+- [ ] **INV-FIX — v1 correctness fixes (convert↔amender clobber, global date, id validation, table escaping)** [ROUTINE] <!-- id:86b5 -->
+  Fable review (2026-07-11) found 4 real bugs the green v1 tests miss. Fix ALL, each with a NEW red test:
+  1. **Amender-preserving idempotence (#5, the important one):** `_write_record` byte-compares a
+     record-only render, so any amender frontmatter write-back (zkm-ner entities/tags) is CLOBBERED on
+     the next `zkm convert inventory` → permanent rewrite/re-amend churn (violates the amendment
+     contract — md is source of truth). Fix: read the existing doc, PRESERVE frontmatter the plugin
+     doesn't own (amender-added `entities[]` beyond this plugin's own `scope:inventory.*`, extra
+     `tags`), merge the plugin's own fields, and compare/write the MERGED result. RED: convert →
+     simulate an amender adding a `scope:body` entity + a tag → convert again → the amender's
+     entity/tag SURVIVE and the second convert returns no created paths.
+  2. **Per-record temporal signal (#6a):** `date` is a single manifest-mtime value stamped on EVERY
+     record, so editing one record (or `touch`ing the manifest) rewrites ALL records → destroys the
+     per-record git temporal signal the plugin exists for. Fix: drop the manifest-mtime `date`
+     (git IS the temporal index); use a per-record `date`/`added` field only if the manifest supplies
+     one, else omit. RED: edit ONE record in a 2-record manifest → re-convert → exactly ONE file changes.
+  3. **`id` validation (#6b):** `record["id"]` is used raw as a filename → KeyError mid-run if missing,
+     `../` path escape, silent duplicate collision. Fix: require `id` (clear error naming the record),
+     sanitize to a safe slug confined to the lane dir, and error on duplicate ids. RED: missing-id →
+     clear error; `id: "../evil"` cannot escape `inventory/`; duplicate ids → error.
+  4. **Table cell escaping (#6d):** a `|` (or newline) in a value breaks the markdown table. Fix:
+     escape/replace `|` and newlines in cell values (or render a definition list). RED: a value with `|`
+     renders without breaking the table and remains searchable.
+  **Bump minor → 0.3.0** (frontmatter output shape changes: `date` dropped). Full suite green + ruff.
+
 - [ ] **INV3 — find-dump drive-content index (lane-c, fast-follow)** [HARD] 🚧 GATED <!-- id:46b6 -->
   Mount each drive + record its file listing (paths/sizes/mtimes) → searchable per-drive
   content so `zkm search "<title>"` names which drive holds a file. **git-annex INDEPENDENT**
