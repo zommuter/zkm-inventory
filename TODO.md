@@ -7,7 +7,8 @@ this file carries summary lines only. See core `id:e65e` for the umbrella item.
 
 - [x] INV1 (id:82a2) — drives lane → `inventory/drives/<id>.md`, shipped v0.2.0. See ROADMAP.
 - [x] INV2 (id:5697) — devices lane → `inventory/devices/<id>.md` + searchable status, shipped v0.2.0. See ROADMAP.
-- [ ] INV3 (id:46b6) — find-dump drive-content index (lane-c, fast-follow, HARD, gated on v1). See ROADMAP.
+- [ ] INV3 (id:46b6) — find-dump drive-content index (lane-c). Design DONE (docs/inv3-lane-c-design.md); sub-items INV3a(core)/INV3b/INV3c/INV3d. Packaging = separate plugin `inventory-finddump`. Storage tier 🚧 GATED on INV3-PILOT. See ROADMAP.
+- [ ] INV3-PILOT — measure a real HDD's file count/size (scripts/pilot-drive-count.sh) to pick the listing storage tier. HUMAN-run (needs a drive plugged in). Gates INV3b–d.
 
 ## Deferred
 

@@ -56,3 +56,17 @@ Bumped 0.1.0 → 0.2.0 (`pyproject.toml`, `plugin.yaml`, `PLUGIN_VERSION`), `uv 
 `v0.2.0` in the same commit. Friction: none — the spec matched the red tests cleanly; the only
 surprise was the `zkm-config.yaml` top-level-key convention (not nested under `plugins:`),
 discovered during the CLI smoke test rather than from written docs.
+
+## 2026-07-11 22:35 — reviewer (claude-opus-4-8, /meeting follow-up)
+
+INV3 (id:46b6) design pass landed → `docs/inv3-lane-c-design.md`. Decomposed into INV3a
+(CENTRAL — dense-leg per-path opt-out in core `src/zkm/embed.py`; the find-dump md shards would
+otherwise blow the embed index — filed in `~/src/zkm` ledger, not here), INV3b (deterministic
+size-capped shard sweep), INV3c (mount orchestration + read-only UUID/label online-set), INV3d
+(annex-pointer exclusion, small). User decisions: packaging = SEPARATE plugin `inventory-finddump`;
+mount-identity = read-only UUID/label (marker-file rejected — no-write-to-drives fence); dense
+opt-out = config path-prefix. **Storage tier is GATED on an HDD-content pilot** (INV3-PILOT +
+`scripts/pilot-drive-count.sh`) — measure a real drive's file count before choosing T1-git-shards
+vs annex-raw+thin-summary. INV3b–d gated on that pilot; INV3a independent/dispatchable now. The
+NER-amender-trips-on-md-tables finding (from the executor's CLI smoke test) is routed to zkm-ner.
+A Fable pass will sanity-review this session's decisions.

@@ -38,15 +38,39 @@ Shared rules for every item below:
   INV1 helpers (shared record→md rendering). **Done-check:**
   `uv run pytest tests/test_inventory.py -k "device or dust"` green, then FULL suite green.
 
-- [ ] **INV3 — find-dump drive-content index (lane-c, fast-follow)** [HARD] 🚧 GATED (DEP: v1 lanes INV1+INV2 shipped) <!-- id:46b6 -->
-  Mount each drive + record its file listing (paths/sizes/mtimes) → a searchable per-drive
-  content manifest so `zkm search "<title>"` names which drive holds a file. **git-annex
-  INDEPENDENT** (covers bulk non-annex content). Needs its OWN design pass before dispatch:
-  manifest size strategy (per-drive chunking / compact format), mount orchestration + which
-  drives are online, snapshot refresh (re-sweep = git diff = "when did a file move/vanish"),
-  and how a huge file list is indexed without blowing the BM25 budget. Demonstrated need:
-  locate favorite movies/media across drives (2026-07-11). Do NOT start until INV1+INV2 are
-  green and the reviewer has scoped the sub-items. See ARCHITECTURE.md.
+- [ ] **INV3 — find-dump drive-content index (lane-c, fast-follow)** [HARD] 🚧 GATED <!-- id:46b6 -->
+  Mount each drive + record its file listing (paths/sizes/mtimes) → searchable per-drive
+  content so `zkm search "<title>"` names which drive holds a file. **git-annex INDEPENDENT**
+  (covers bulk non-annex content). **Design pass DONE 2026-07-11 → `docs/inv3-lane-c-design.md`.**
+  Decomposed into sub-items (dispatch order `INV3a ∥ INV3b → INV3c → INV3d`):
+  - **INV3a** — [CENTRAL/core, in `~/src/zkm`] dense-leg per-path opt-out in `src/zkm/embed.py`
+    (`dense_skip_prefixes`, default incl. `inventory/find-dump/`). Prereq: find-dump md shards
+    must NOT hit the dense index. Independent of the pilot — dispatchable NOW. Tracked centrally.
+  - **INV3b** — find-dump sweep core: deterministic, size-capped, locality-preserving md shards
+    `inventory/find-dump/<id>/NNNN.md` + per-drive summary md carrying the shared
+    `scope:inventory.drive` entity + `last_swept`. Idempotent (byte-identical re-render = git no-op).
+  - **INV3c** — mount orchestration + read-only UUID/label online-set resolution; sweep only online
+    drives; absent drives left as last-known; never raise on absence.
+  - **INV3d** — (small/optional) annex-pointer exclusion (leg-disjointness) + staleness legibility.
+
+  **Decisions (this session):** packaging = a SEPARATE plugin `inventory-finddump` (multi-doc
+  `plugin.yaml`, `zkm convert inventory-finddump`) so the light manifest render stays fast;
+  mount-identity = read-only filesystem UUID/label (NO marker-file — honors the no-write-to-drives
+  fence); dense opt-out = config path-prefix skip. **Storage tier for the listing shards is
+  🚧 GATED ON AN HDD-CONTENT PILOT** (see below) — pilot ≥1 real drive's file count/size before
+  committing to T1-git-shards vs annex-raw+thin-summary. Do NOT dispatch INV3b–d until v1 is green
+  (✅ it is) AND the pilot resolves the storage tier. INV3a may proceed independently.
+
+## Pilot (gates INV3 storage tier)
+
+- [ ] **INV3-PILOT — measure real HDD contents before choosing the listing storage tier.** Mount
+  ≥1 real external drive and measure file count + total listing size (e.g.
+  `find <mount> -type f | wc -l` and a `path\tsize\tmtime` line-size estimate) to learn whether
+  T1-git shards (~80 B/line, delta-cheap; heavy only at multi-million files) are viable or a
+  drive is large enough to want annex-raw + thin-git-summary. This is a HUMAN-run pilot (needs a
+  physical drive plugged in). A helper script is at `scripts/pilot-drive-count.sh`. Feeds the
+  storage-tier decision in `docs/inv3-lane-c-design.md` §Q2 / HUMAN DECISION #1. INV3b–d are
+  gated on this.
 
 ## Deferred / dormant (not dispatchable yet)
 
