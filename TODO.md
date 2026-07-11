@@ -8,7 +8,7 @@ this file carries summary lines only. See core `id:e65e` for the umbrella item.
 - [x] INV1 (id:82a2) — drives lane → `inventory/drives/<id>.md`, shipped v0.2.0. See ROADMAP.
 - [x] INV2 (id:5697) — devices lane → `inventory/devices/<id>.md` + searchable status, shipped v0.2.0. See ROADMAP.
 - [x] INV-FIX (id:86b5) — v1 correctness fixes: amender-clobber idempotence, per-record date, id validation, table escaping (Fable review). Shipped v0.3.0. See ROADMAP + docs/fable-session-review-2026-07-11.md.
-- [ ] INV3 (id:46b6) — find-dump drive-content index (lane-c). Design DONE; INV3b shipped v0.4.0 (separate plugin `inventory-finddump`, `fd`/`pathspec` scan+ignore adapter, git-tracked shards). Remaining sub-items: INV3a (core, dense-leg opt-out), INV3c (mount orchestration), INV3d (annex-pointer exclusion). Storage = T1-git shards (RATIFIED default) + prune globs; annex escape-hatch evidence-gated. See ROADMAP.
+- [ ] INV3 (id:46b6) — find-dump drive-content index (lane-c). Design DONE; INV3b shipped v0.4.0 (separate plugin `inventory-finddump`, `fd`/`pathspec` scan+ignore adapter, git-tracked shards); INV3c shipped v0.5.0 (mount orchestration — `mount: {uuid?, label?}` + `content_roots:` auto-detects the online mountpoint via injectable `_enumerate_mounts()`/real `lsblk`, offline drives skipped no-raise, explicit `roots:` still works). Remaining sub-items: INV3a (core, dense-leg opt-out), INV3d (annex-pointer exclusion). Storage = T1-git shards (RATIFIED default) + prune globs; annex escape-hatch evidence-gated. See ROADMAP.
 - [ ] INV3-PILOT — measure a real HDD's file count/size (scripts/pilot-drive-count.sh) to CALIBRATE the annex flip-threshold + prune globs. HUMAN-run. Does NOT gate INV3b.
 
 ## Deferred

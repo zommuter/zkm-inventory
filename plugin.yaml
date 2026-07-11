@@ -1,5 +1,5 @@
 name: inventory
-version: 0.4.1
+version: 0.5.0
 description: Convert a hand-authored asset-inventory manifest (external drives + hardware/RPis/IoT) to searchable markdown with typed inventory entities
 license: MIT
 
@@ -17,7 +17,7 @@ config:
 
 ---
 name: inventory-finddump
-version: 0.4.1
+version: 0.5.0
 description: Sweep configured drive content-roots (fd/pathspec scan+ignore adapter) into searchable per-drive find-dump markdown shards
 license: MIT
 module: finddump
@@ -28,4 +28,4 @@ creates_dirs:
 config:
   drives:
     required: true
-    description: "List of drives to sweep: each entry is {id: <drive-id>, roots: [<mounted path>, ...]}. A configured root that isn't currently mounted is skipped gracefully (drive offline); it never raises."
+    description: "List of drives to sweep: each entry is either {id, roots: [<mounted path>, ...]} (explicit mount paths) or {id, mount: {uuid?, label?}, content_roots: [<relpath>...]} (automatic online-drive detection by filesystem UUID/label -- content_roots resolve relative to the detected mountpoint; omit to sweep the whole mountpoint). A drive that isn't currently online (path absent, or no mount matches uuid/label) is skipped gracefully; it never raises."

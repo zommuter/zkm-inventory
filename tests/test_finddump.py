@@ -221,3 +221,194 @@ def test_fd_backend_matches_pathspec_backend_when_available(tmp_path: Path, monk
     entries_fd = fd._list_files(root, backend="fd")
     entries_pathspec = fd._list_files(root, backend="pathspec")
     assert {e[0] for e in entries_fd} == {e[0] for e in entries_pathspec}
+
+
+# --- INV3c: mount orchestration + online-set resolution ---------------------
+#
+# A configured drive may declare `mount: {uuid?, label?}` + `content_roots:
+# [<relpath>...]` instead of explicit `roots:`. At convert time the currently
+# mounted filesystems are enumerated via `_enumerate_mounts()` (injectable —
+# tests monkeypatch it to a fixture list, never shelling out to real `lsblk`)
+# and matched by uuid (exact) or label (case-insensitive) to find the drive's
+# live mountpoint; `content_roots` are then resolved relative to it.
+
+
+def _mount_drive_config(
+    drive_id: str, *, uuid: str | None = None, label: str | None = None, content_roots=None
+) -> dict:
+    mount: dict = {}
+    if uuid is not None:
+        mount["uuid"] = uuid
+    if label is not None:
+        mount["label"] = label
+    drive: dict = {"id": drive_id, "mount": mount}
+    if content_roots is not None:
+        drive["content_roots"] = content_roots
+    return {"drives": [drive]}
+
+
+def test_mount_matched_by_uuid_sweeps_content_roots(tmp_path: Path, monkeypatch):
+    mountpoint = tmp_path / "drive"
+    _make_tree(mountpoint)
+    monkeypatch.setattr(
+        fd, "_enumerate_mounts", lambda: [("FAKE-UUID-1234", "MyDrive", mountpoint)]
+    )
+
+    store = tmp_path / "store"
+    config = _mount_drive_config(
+        "media-1", uuid="FAKE-UUID-1234", content_roots=["Videos", "Photos"]
+    )
+    fd.convert(store, config)
+
+    bodies = _shard_bodies(store, "media-1")
+    haystack = "\n".join(bodies.values())
+    assert "blade-runner-2049.mkv" in haystack
+    assert "holiday.jpg" in haystack
+
+
+def test_mount_matched_by_label_case_insensitive(tmp_path: Path, monkeypatch):
+    mountpoint = tmp_path / "drive"
+    _make_tree(mountpoint)
+    monkeypatch.setattr(
+        fd, "_enumerate_mounts", lambda: [(None, "MyDrive", mountpoint)]
+    )
+
+    store = tmp_path / "store"
+    config = _mount_drive_config("media-2", label="mydrive", content_roots=["Videos"])
+    fd.convert(store, config)
+
+    bodies = _shard_bodies(store, "media-2")
+    haystack = "\n".join(bodies.values())
+    assert "blade-runner-2049.mkv" in haystack
+
+
+def test_offline_configured_drive_skipped_no_raise_prior_shards_untouched(
+    tmp_path: Path, monkeypatch
+):
+    mountpoint = tmp_path / "drive"
+    _make_tree(mountpoint)
+    store = tmp_path / "store"
+
+    # First sweep while online (matched by uuid) to create prior shards.
+    monkeypatch.setattr(fd, "_enumerate_mounts", lambda: [("UUID-ONLINE", None, mountpoint)])
+    config = _mount_drive_config("offline-1", uuid="UUID-ONLINE", content_roots=["Videos"])
+    fd.convert(store, config)
+    before = _shard_bodies(store, "offline-1")
+    assert before  # sanity: something was written while online
+
+    # Now the drive is unplugged -- no mount matches its uuid/label at all.
+    monkeypatch.setattr(fd, "_enumerate_mounts", lambda: [])
+    result = fd.convert(store, config)  # must not raise
+
+    after = _shard_bodies(store, "offline-1")
+    assert result == [], "an offline configured drive must report no changes"
+    assert after == before, "prior shards must be left untouched when the drive is offline"
+
+
+def test_content_roots_restricts_sweep_to_those_subpaths(tmp_path: Path, monkeypatch):
+    mountpoint = tmp_path / "drive"
+    _make_tree(mountpoint)
+    monkeypatch.setattr(fd, "_enumerate_mounts", lambda: [("UUID-X", None, mountpoint)])
+
+    store = tmp_path / "store"
+    config = _mount_drive_config("media-3", uuid="UUID-X", content_roots=["Videos"])
+    fd.convert(store, config)
+
+    bodies = _shard_bodies(store, "media-3")
+    haystack = "\n".join(bodies.values())
+    assert "blade-runner-2049.mkv" in haystack
+    assert "holiday.jpg" not in haystack, "Photos/ is outside content_roots and must be excluded"
+
+
+def test_explicit_roots_still_works_unchanged(tmp_path: Path, monkeypatch):
+    # A drive with explicit `roots:` (INV3b style) must keep working even
+    # though `_enumerate_mounts` is available/monkeypatched -- explicit roots
+    # are an override that bypasses mount resolution entirely.
+    monkeypatch.setattr(fd, "_enumerate_mounts", lambda: [])
+
+    root = tmp_path / "drive"
+    _make_tree(root)
+    store = tmp_path / "store"
+    fd.convert(store, _drives_config(root, drive_id="explicit-1"))
+
+    bodies = _shard_bodies(store, "explicit-1")
+    haystack = "\n".join(bodies.values())
+    assert "blade-runner-2049.mkv" in haystack
+
+
+def test_mount_based_resweep_unchanged_is_noop_and_last_swept_stable(tmp_path: Path, monkeypatch):
+    import datetime as _dt
+
+    class _FakeDT(_dt.datetime):
+        _n = _dt.datetime(2026, 1, 1, 10, 0, 0)
+
+        @classmethod
+        def now(cls, tz=None):
+            cur = cls._n
+            cls._n = cls._n + _dt.timedelta(hours=1)
+            return cur
+
+    monkeypatch.setattr(fd, "datetime", _FakeDT)
+
+    mountpoint = tmp_path / "drive"
+    _make_tree(mountpoint)
+    monkeypatch.setattr(fd, "_enumerate_mounts", lambda: [("UUID-STABLE", None, mountpoint)])
+
+    store = tmp_path / "store"
+    config = _mount_drive_config("media-stable", uuid="UUID-STABLE", content_roots=["Videos"])
+    fd.convert(store, config)
+
+    summary = store / "inventory" / "find-dump" / "media-stable.md"
+    before_summary = summary.read_text(encoding="utf-8")
+    before_shards = _shard_bodies(store, "media-stable")
+    before_last_swept = frontmatter.load(summary).metadata["last_swept"]
+
+    second = fd.convert(store, config)  # now() returns a LATER time
+
+    after_summary = summary.read_text(encoding="utf-8")
+    after_shards = _shard_bodies(store, "media-stable")
+    after_last_swept = frontmatter.load(summary).metadata["last_swept"]
+
+    assert second == [], "an unchanged mount-based re-sweep must report no changed paths"
+    assert before_shards == after_shards
+    assert before_summary == after_summary
+    assert before_last_swept == after_last_swept
+
+
+def test_enumerate_mounts_real_lsblk_parsing(monkeypatch, tmp_path: Path):
+    """`_enumerate_mounts()` parses real `lsblk -P` output shape correctly.
+
+    Hermetic: monkeypatches `subprocess.run` to return a canned `lsblk -P -n`
+    transcript (captured from a real Linux host) rather than shelling out.
+    """
+    sample_stdout = (
+        'UUID="" LABEL="" MOUNTPOINT=""\n'
+        'UUID="B4FC7F32FC7EEE4C" LABEL="" MOUNTPOINT=""\n'
+        'UUID="E054F82054F7F6DE" LABEL="Cee" MOUNTPOINT="/run/media/tobias/Cee"\n'
+        'UUID="e84375a2-3279-4419-ae99-7053088b2f3c" LABEL="Manjaro" '
+        'MOUNTPOINT="/run/media/tobias/Manjaro"\n'
+    )
+
+    class _FakeCompleted:
+        stdout = sample_stdout
+
+    def _fake_run(cmd, **kwargs):
+        assert cmd[0] in ("lsblk",) or "lsblk" in cmd[0]
+        return _FakeCompleted()
+
+    monkeypatch.setattr(fd.shutil, "which", lambda name: "/usr/bin/lsblk" if name == "lsblk" else None)
+    monkeypatch.setattr(fd.subprocess, "run", _fake_run)
+
+    mounts = fd._enumerate_mounts()
+    assert (
+        "E054F82054F7F6DE",
+        "Cee",
+        Path("/run/media/tobias/Cee"),
+    ) in mounts
+    assert (
+        "e84375a2-3279-4419-ae99-7053088b2f3c",
+        "Manjaro",
+        Path("/run/media/tobias/Manjaro"),
+    ) in mounts
+    # Unmounted block devices (empty MOUNTPOINT) must be omitted entirely.
+    assert all(mp != Path("") for _, _, mp in mounts)

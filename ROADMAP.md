@@ -90,8 +90,15 @@ Shared rules for every item below:
     implemented (deferred — `fd`'s default `.gitignore`+hidden skip already covers the
     git-objects case for v1; left as a note for INV3c/INV3d if a real repo-inside-drive case
     needs it). Ordering: `INV3a` (core, dense-leg opt-out) still tracked separately in `~/src/zkm`.
-  - **INV3c** — mount orchestration + read-only UUID/label online-set resolution; sweep only online
-    drives; absent drives left as last-known; never raise on absence.
+  - [x] **INV3c** — mount orchestration + read-only UUID/label online-set resolution; sweep only online
+    drives; absent drives left as last-known; never raise on absence. **Shipped v0.5.0**: a
+    drive may declare `mount: {uuid?, label?}` + `content_roots: [<relpath>...]` instead of
+    explicit `roots:`; `_enumerate_mounts()` (injectable — real impl shells out to
+    `lsblk -o UUID,LABEL,MOUNTPOINT -P -n`, never requires root, degrades to `[]` on any
+    failure) enumerates the online set once per `convert()` call, `_resolve_mount()` matches
+    by `uuid` (exact) OR `label` (case-insensitive); an unmatched/offline drive is skipped
+    (no raise, prior shards untouched); explicit `roots:` still bypasses mount resolution
+    entirely (INV3b unchanged).
   - **INV3d** — (small/optional) annex-pointer exclusion (leg-disjointness) + staleness legibility.
 
   **Decisions (this session):** packaging = a SEPARATE plugin `inventory-finddump` (multi-doc

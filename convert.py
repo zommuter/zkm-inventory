@@ -39,7 +39,7 @@ import frontmatter
 from zkm.atomic import write_atomic
 
 PLUGIN_NAME = "inventory"
-PLUGIN_VERSION = "0.4.1"
+PLUGIN_VERSION = "0.5.0"
 
 ProgressCallback = Callable[[int, int | None, str], None]
 

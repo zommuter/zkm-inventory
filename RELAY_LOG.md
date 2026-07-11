@@ -159,3 +159,43 @@ because both sweeps landed in the same wall-clock second. Verified live: first c
 files (`.git/objects` + `node_modules` skipped by the pathspec fallback), re-convert reports
 "Converted 0 file(s)" with a clean tree. 22 passed + 1 skipped; ruff clean. Bumped 0.4.0 → 0.4.1
 (patch: two shipped-bug fixes).
+
+## 2026-07-11 — executor (Sonnet)
+
+Worked ROADMAP id:46b6 sub-item INV3c — mount orchestration + read-only UUID/label
+online-set resolution, per `docs/inv3-lane-c-design.md` §Q3. A configured drive may now
+declare `mount: {uuid?, label?}` + `content_roots: [<relpath>...]` instead of explicit
+`roots:`. Added `_enumerate_mounts()` (injectable — real implementation shells out to
+`lsblk -o UUID,LABEL,MOUNTPOINT -P -n`, a read-only, no-privilege query; parses `KEY="VALUE"`
+pairs via `shlex.split`, omits rows with an empty `MOUNTPOINT`, and degrades to `[]` on any
+failure — missing binary, non-Linux host, parse error — rather than raising) and
+`_resolve_mount()` (matches a drive's `mount:` block by `uuid`, exact, OR `label`,
+case-insensitive; either identifier suffices). `convert()` now calls `_resolve_drive_roots()`
+first (explicit `roots:` still bypasses mount resolution entirely, unchanged INV3b path);
+only when a drive has no explicit `roots:` does it lazily enumerate mounts (once per
+`convert()` call, not once per drive) and resolve `content_roots` relative to the matched
+mountpoint (or sweep the whole mountpoint when `content_roots` is omitted). An unmatched
+mount (drive offline) is skipped exactly like an absent explicit root: no raise, no touch to
+its existing shards.
+
+Wrote 7 RED tests first (`tests/test_finddump.py`, confirmed failing —
+`AttributeError: module 'finddump' has no attribute '_enumerate_mounts'` — before
+implementing), all green after: match by `uuid` sweeps the matched `content_roots`; match by
+`label` works case-insensitively; an offline configured drive (no matching mount) is skipped
+with no exception and its prior shards from an earlier online sweep are byte-identical
+after; `content_roots` restricts the sweep (`Photos/` excluded when only `Videos` is
+configured); explicit `roots:` (INV3b style) still works unchanged even with
+`_enumerate_mounts` monkeypatched to return an empty online set; a re-sweep of an unchanged
+mount-resolved drive is a byte-identical no-op with a stable `last_swept` (faked-clock
+advance, same pattern as the existing INV3b test); and a dedicated parsing test feeds
+`_enumerate_mounts()` a canned real `lsblk -P -n` transcript (captured from this host) via a
+monkeypatched `subprocess.run` to confirm the real-Linux parsing path (not just the
+mock-injection seam) — unmounted block devices with an empty `MOUNTPOINT` are correctly
+omitted. Full suite: 29 passed / 1 skipped (up from 22 passed / 1 skipped); ruff clean on
+`finddump.py tests/`. Bumped 0.4.1 → 0.5.0 (new feature) across `pyproject.toml`, both
+`plugin.yaml` docs, and `PLUGIN_VERSION` in both `convert.py` and `finddump.py`; `uv lock`
+regenerated; tagged `v0.5.0`. Friction: none of substance — verified the real `lsblk -o
+UUID,LABEL,MOUNTPOINT -P -n` output shape on this host first (`UUID="..." LABEL="..."
+MOUNTPOINT="..."` per line, `-n` a no-op with `-P`) before writing the parser, so the
+production path should hold up under the reviewer's planned live-verify against a real
+mounted SSD.

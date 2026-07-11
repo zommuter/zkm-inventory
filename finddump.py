@@ -9,9 +9,17 @@ out to `fd` (optional dep, graceful-degrade to pure-Python ``pathspec`` +
 ``os.walk`` when absent). No bespoke walker/ignore engine/search engine is
 written here, only glue + the shard renderer.
 
-Config: ``drives: [{id: <drive-id>, roots: [<mounted path>, ...]}, ...]``. A
-configured root that does not currently exist on disk (drive offline / not
-mounted) is skipped gracefully — never raised.
+Config: ``drives: [{id: <drive-id>, roots: [<mounted path>, ...]}, ...]`` for
+explicit mount paths (INV3b), OR ``drives: [{id, mount: {uuid?, label?},
+content_roots: [<relpath>...]}, ...]`` for automatic online-drive detection
+(INV3c) — the currently-mounted filesystems are enumerated (read-only
+UUID/label, no marker-file write-back) and matched against ``mount:`` to find
+the drive's live mountpoint; ``content_roots`` (optional — omit to sweep the
+whole mountpoint) are then resolved relative to it. A drive with explicit
+``roots:`` always uses them directly, bypassing mount resolution entirely. A
+configured root/drive that is not currently online (path absent on disk, or no
+mounted filesystem matches its ``mount:`` block) is skipped gracefully —
+never raised, prior shards left untouched (last-known).
 
 Idempotence (design §Q4): entries are sorted, shards are packed
 deterministically (grouped by top-level directory under the root, split only
@@ -25,6 +33,7 @@ changed (never on a true no-op re-sweep).
 from __future__ import annotations
 
 import os
+import shlex
 import shutil
 import subprocess
 from datetime import datetime
@@ -36,7 +45,7 @@ import pathspec
 from zkm.atomic import write_atomic
 
 PLUGIN_NAME = "inventory-finddump"
-PLUGIN_VERSION = "0.4.1"
+PLUGIN_VERSION = "0.5.0"
 
 
 def _validate_id(record: dict, kind: str, seen_ids: set[str]) -> str:
@@ -89,13 +98,30 @@ def convert(store_path: Path, config: dict, *, progress=None) -> list[Path]:
     created: list[Path] = []
     total = len(drives)
     seen_ids: set[str] = set()
+    mounts: list[tuple[str | None, str | None, Path]] | None = None
 
     for idx, drive in enumerate(drives):
         drive_id = _validate_id(drive, "drive", seen_ids)
         if progress:
             progress(idx, total, drive_id)
 
-        roots = [Path(r) for r in (drive.get("roots") or [])]
+        roots = _resolve_drive_roots(drive)
+        if roots is None:
+            # `mount:`-configured drive with no currently-matching mounted
+            # filesystem (drive offline) — never raise, never touch its
+            # existing shards (design §Q3/§Q4: absent drive = last-known).
+            # Resolve the online set lazily and only once per convert() call.
+            if mounts is None:
+                mounts = _enumerate_mounts()
+            mountpoint = _resolve_mount(drive, mounts)
+            if mountpoint is None:
+                continue
+            content_roots = drive.get("content_roots")
+            if content_roots:
+                roots = [mountpoint / cr for cr in content_roots]
+            else:
+                roots = [mountpoint]
+
         online_roots = [r for r in roots if r.exists()]
         if not online_roots:
             # Drive not currently mounted — never raise, never touch its
@@ -122,6 +148,95 @@ def convert(store_path: Path, config: dict, *, progress=None) -> list[Path]:
             created.append(summary_path)
 
     return created
+
+
+# ── INV3c: mount orchestration + online-set resolution ──────────────────────
+
+
+def _resolve_drive_roots(drive: dict) -> list[Path] | None:
+    """Explicit `roots:` (INV3b style) as an override/fallback.
+
+    Returns the configured roots verbatim when present, else ``None`` to
+    signal the caller should fall back to `mount:`-based auto-resolution
+    (INV3c) instead.
+    """
+    roots_cfg = drive.get("roots")
+    if roots_cfg:
+        return [Path(r) for r in roots_cfg]
+    return None
+
+
+def _enumerate_mounts() -> list[tuple[str | None, str | None, Path]]:
+    """Read-only enumeration of currently-mounted filesystems.
+
+    Returns a list of ``(uuid, label, mountpoint)`` triples for every
+    block device `lsblk` reports as currently mounted (rows with an empty
+    ``MOUNTPOINT`` — i.e. not mounted — are omitted). Implemented via
+    ``lsblk -o UUID,LABEL,MOUNTPOINT -P -n``, a read-only query that never
+    requires root and never writes to any drive (honors the plugin's
+    no-write-back-to-drives boundary, design §Q3).
+
+    Never raises: any failure (missing `lsblk`, non-Linux host, parse
+    error) yields an empty list rather than blocking a sweep — mount
+    orchestration must degrade gracefully, exactly like an absent drive.
+    This function is deliberately injectable (tests monkeypatch it wholesale
+    with fixture triples) so the suite never shells out to real `lsblk` or
+    touches real mounts.
+    """
+    lsblk_bin = shutil.which("lsblk")
+    if not lsblk_bin:
+        return []
+    try:
+        proc = subprocess.run(
+            [lsblk_bin, "-o", "UUID,LABEL,MOUNTPOINT", "-P", "-n"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return []
+
+    results: list[tuple[str | None, str | None, Path]] = []
+    for line in proc.stdout.splitlines():
+        if not line.strip():
+            continue
+        kv: dict[str, str] = {}
+        try:
+            fields = shlex.split(line)
+        except ValueError:
+            continue
+        for field in fields:
+            key, sep, value = field.partition("=")
+            if sep:
+                kv[key] = value
+        mountpoint = kv.get("MOUNTPOINT") or ""
+        if not mountpoint:
+            continue
+        results.append((kv.get("UUID") or None, kv.get("LABEL") or None, Path(mountpoint)))
+    return results
+
+
+def _resolve_mount(
+    drive: dict, mounts: list[tuple[str | None, str | None, Path]]
+) -> Path | None:
+    """Match *drive*'s `mount:` block against the enumerated online set.
+
+    Matches by ``uuid`` (exact) OR ``label`` (case-insensitive) — either
+    identifier suffices. Returns the matching mountpoint, or ``None`` when
+    no currently-mounted filesystem matches (drive offline) — the caller
+    treats that as "skip gracefully", never as an error.
+    """
+    mount_cfg = drive.get("mount") or {}
+    want_uuid = mount_cfg.get("uuid")
+    want_label = mount_cfg.get("label")
+    if not want_uuid and not want_label:
+        return None
+    for uuid, label, mountpoint in mounts:
+        if want_uuid and uuid and uuid == want_uuid:
+            return mountpoint
+        if want_label and label and label.lower() == str(want_label).lower():
+            return mountpoint
+    return None
 
 
 # ── scanner: fd backend / pathspec fallback ─────────────────────────────────
