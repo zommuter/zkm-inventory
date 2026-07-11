@@ -333,3 +333,13 @@ mature reuse target:
 4. **Recalibration note:** my crude 1.9M→1.1M home prune only removed ~8 patterns; a real gitignore-aware
    walk (fd defaults + `git ls-files`) drops far more, so a *media-focused content-root* likely lands WELL
    under the ~1M threshold — the annex escape-hatch is then only for genuinely huge media libraries.
+
+**RATIFIED 2026-07-11 — INV3b is a THIN `fd`-ADAPTER, not a cataloger.** Key realization: a disk-cataloger
+does (scan+ignore) + (store+search), but **zkm already owns (store+search)** via its BM25 index + git store
++ `zkm search` — that layer is what fuses drive-contents with mail/messages, gives the git temporal diff, and
+links to the lane-a drive entity. So we reuse ONLY the half zkm lacks — **scan+ignore = `fd`/`ripgrep --files`
+(+ `git ls-files` inside repos)** — and keep zkm for the rest. Wrapping a full cataloger (dcat/Basenji) is
+backwards: it duplicates zkm's store+search and most lack the ignore layer (the actual hard part). INV3b
+therefore = **shell out to `fd --type f <content-roots>` (optional dep; graceful-degrade to pure-Python
+`pathspec`+os.walk when absent) → render the already-filtered listing into git-tracked md shards keyed by
+UUID/label**. No bespoke walker, ignore engine, or search engine is written — only glue + the renderer.

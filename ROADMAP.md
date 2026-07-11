@@ -70,9 +70,15 @@ Shared rules for every item below:
   - **INV3a** — [CENTRAL/core, in `~/src/zkm`] dense-leg per-path opt-out in `src/zkm/embed.py`
     (`dense_skip_prefixes`, default incl. `inventory/find-dump/`). Prereq: find-dump md shards
     must NOT hit the dense index. Independent of the pilot — dispatchable NOW. Tracked centrally.
-  - **INV3b** — find-dump sweep core: deterministic, size-capped, locality-preserving md shards
-    `inventory/find-dump/<id>/NNNN.md` + per-drive summary md carrying the shared
-    `scope:inventory.drive` entity + `last_swept`. Idempotent (byte-identical re-render = git no-op).
+  - **INV3b** — find-dump sweep core = a THIN `fd`-ADAPTER (RATIFIED 2026-07-11): reuse `fd`/`ripgrep
+    --files` (+ `git ls-files` inside repos) as the scan+ignore engine — NO bespoke walker/ignore/prune
+    code (fd already skips `.git`/`node_modules`/caches/hidden + honors `.gitignore`). `fd` is an OPTIONAL
+    dep, graceful-degrade to pure-Python `pathspec`+os.walk when absent. Render the already-filtered listing
+    into deterministic, size-capped, locality-preserving md shards `inventory/find-dump/<id>/NNNN.md` +
+    per-drive summary md carrying the shared `scope:inventory.drive` entity + `last_swept`. Idempotent
+    (byte-identical re-render = git no-op). zkm's existing BM25+git is the catalog+search+temporal layer —
+    NOT rebuilt. Config: per-drive `content_roots` (opt-in) so we index `Videos/`, not `/usr`. See
+    `docs/inv3-lane-c-design.md` §Prior art (RATIFIED).
   - **INV3c** — mount orchestration + read-only UUID/label online-set resolution; sweep only online
     drives; absent drives left as last-known; never raise on absence.
   - **INV3d** — (small/optional) annex-pointer exclusion (leg-disjointness) + staleness legibility.
