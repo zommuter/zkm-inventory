@@ -299,10 +299,37 @@ pruning ALL of those = **1,125,925** — still >1M.
 Net: **INV3b default = content-roots (opt-in per drive) + prune-set, T1-git shards; auto-fall-back to
 annex-raw+thin-summary when a swept root still exceeds ~1M files / ~100 MB.**
 
-> **⚠️ Do NOT hand-roll the prune-set / walker (2026-07-11).** The list above is *observed noise*, not
-> a mechanism. Distinguishing "real files" from metafiles (`.git/objects`, `node_modules`, caches) is a
-> solved problem — **prior-art survey pending before INV3b is built.** Candidate reuse: `.gitignore`-aware
-> walkers (`fd`/`ripgrep`'s ignore engine, which already skip `.git`/hidden and respect `.ignore`),
-> `git ls-files` for tracked-only listing inside repos, and the offline **disk-catalog** genre
-> (Basenji/GWhere/VVV) which already solves "catalog removable volumes → search which volume holds file X".
-> INV3b's walker + ignore layer should be *chosen from* that prior art, not invented here.
+## Prior art (surveyed 2026-07-11) — do NOT reinvent
+
+The observed prune-set above is *noise data*, not a mechanism. Two distinct solved problems, each with a
+mature reuse target:
+
+**A. "Real files vs metafiles" (git objects, node_modules, caches) = the gitignore-aware walker.**
+- **`ignore` crate** (BurntSushi/ripgrep) — a fast recursive directory iterator that respects `.gitignore`
+  / `.ignore` / global ignore, skips `.git` and hidden by default; **`fd` is built on it**. This IS the
+  canonical answer to "skip metafiles." → zkm reuse options: shell out to **`fd --type f`** / `rg --files`
+  (already ignore-filtered + extremely fast on millions of entries), or pure-Python **`pathspec`** (the
+  gitignore-matcher used by black/pre-commit — no new binary dep, slower).
+- **`git ls-files`** inside a detected git repo → lists only TRACKED working files, never `.git/objects`.
+  The precise answer to "git objects etc." Fold: on hitting a `.git` dir, index via `git ls-files`, skip the
+  `.git/` internals entirely.
+
+**B. "Catalog offline volumes → search which drive holds file X" = the disk-catalog genre (decades old).**
+- **`dcat`** (CLI, closest to zkm) — one named catalog per volume, stored as **gzipped-JSON**, search a
+  single catalog OR the whole collection by name/regex. Same shape as our per-drive-shards + summary.
+- **GWhere / Basenji** (GTK), **VVV / Cathy / WhereIsIt / GCstar / DiskCatalogMaker / abeMeda** (GUI) —
+  all: scan a volume, store its tree keyed by volume label, search offline across volumes, some extract
+  EXIF/ID3 metadata. Validates the per-volume-keyed catalog + offline cross-volume search pattern.
+- **`plocate` / `lolcate`** — fast filename-index (`updatedb` DB); "instant filename search" primitive.
+  zkm already has BM25 over the shards = our search layer; these confirm filename-index is the right primitive.
+
+**Decision for INV3b (supersedes the hand-rolled prune-set):**
+1. **Walker + ignore = reuse gitignore semantics**, not a bespoke prune list. Prefer shelling out to `fd`
+   (optional dep, graceful-degrade to `pathspec`+`os.walk` if absent) so `.git`/`node_modules`/caches/hidden
+   are skipped by the same engine everything else uses; honor a repo's own `.gitignore` + a small zkm global-ignore.
+2. **`git ls-files` for tracked-only listing inside repos** (never index `.git/objects`).
+3. **Catalog model = per-volume, keyed by UUID/label** (dcat/VVV pattern — already our design), but stored as
+   git-tracked md shards (for the temporal diff) instead of gzipped-JSON.
+4. **Recalibration note:** my crude 1.9M→1.1M home prune only removed ~8 patterns; a real gitignore-aware
+   walk (fd defaults + `git ls-files`) drops far more, so a *media-focused content-root* likely lands WELL
+   under the ~1M threshold — the annex escape-hatch is then only for genuinely huge media libraries.
