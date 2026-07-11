@@ -1,5 +1,5 @@
 name: inventory
-version: 0.3.0
+version: 0.4.0
 description: Convert a hand-authored asset-inventory manifest (external drives + hardware/RPis/IoT) to searchable markdown with typed inventory entities
 license: MIT
 
@@ -14,3 +14,18 @@ config:
   manifest:
     required: true
     description: Path to the hand-authored YAML inventory manifest (top-level `drives:` and `devices:` lists). Relative paths resolve against the store root.
+
+---
+name: inventory-finddump
+version: 0.4.0
+description: Sweep configured drive content-roots (fd/pathspec scan+ignore adapter) into searchable per-drive find-dump markdown shards
+license: MIT
+module: finddump
+
+creates_dirs:
+  - inventory/find-dump
+
+config:
+  drives:
+    required: true
+    description: "List of drives to sweep: each entry is {id: <drive-id>, roots: [<mounted path>, ...]}. A configured root that isn't currently mounted is skipped gracefully (drive offline); it never raises."

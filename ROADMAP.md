@@ -70,7 +70,7 @@ Shared rules for every item below:
   - **INV3a** — [CENTRAL/core, in `~/src/zkm`] dense-leg per-path opt-out in `src/zkm/embed.py`
     (`dense_skip_prefixes`, default incl. `inventory/find-dump/`). Prereq: find-dump md shards
     must NOT hit the dense index. Independent of the pilot — dispatchable NOW. Tracked centrally.
-  - **INV3b** — find-dump sweep core = a THIN `fd`-ADAPTER (RATIFIED 2026-07-11): reuse `fd`/`ripgrep
+  - [x] **INV3b** — find-dump sweep core = a THIN `fd`-ADAPTER (RATIFIED 2026-07-11): reuse `fd`/`ripgrep
     --files` (+ `git ls-files` inside repos) as the scan+ignore engine — NO bespoke walker/ignore/prune
     code (fd already skips `.git`/`node_modules`/caches/hidden + honors `.gitignore`). `fd` is an OPTIONAL
     dep, graceful-degrade to pure-Python `pathspec`+os.walk when absent. Render the already-filtered listing
@@ -79,6 +79,17 @@ Shared rules for every item below:
     (byte-identical re-render = git no-op). zkm's existing BM25+git is the catalog+search+temporal layer —
     NOT rebuilt. Config: per-drive `content_roots` (opt-in) so we index `Videos/`, not `/usr`. See
     `docs/inv3-lane-c-design.md` §Prior art (RATIFIED).
+    **Shipped v0.4.0** as a second plugin `inventory-finddump` (multi-doc `plugin.yaml`, module
+    `finddump.py`): `_list_files()` resolves `fd`/`fdfind` when on PATH, else a `pathspec`-driven
+    `os.walk` fallback (hermetic tests force the fallback via `shutil.which` monkeypatch); config
+    `drives: [{id, roots: [...]}]`, a root absent on disk is skipped gracefully (no raise);
+    `_pack_shards()` groups entries by top-level directory (locality anchor) and splits only an
+    oversized group, so one inserted file dirties only its own dir's shard; `_write_summary()`
+    bumps `last_swept` only when a shard changed or the summary's non-timestamp fields differ,
+    so a true no-op re-sweep leaves it untouched. `git ls-files` tracked-only listing NOT
+    implemented (deferred — `fd`'s default `.gitignore`+hidden skip already covers the
+    git-objects case for v1; left as a note for INV3c/INV3d if a real repo-inside-drive case
+    needs it). Ordering: `INV3a` (core, dense-leg opt-out) still tracked separately in `~/src/zkm`.
   - **INV3c** — mount orchestration + read-only UUID/label online-set resolution; sweep only online
     drives; absent drives left as last-known; never raise on absence.
   - **INV3d** — (small/optional) annex-pointer exclusion (leg-disjointness) + staleness legibility.

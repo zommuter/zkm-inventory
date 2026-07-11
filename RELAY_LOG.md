@@ -102,3 +102,42 @@ Table cells escape `|` and newlines. All 8 original tests still green, all 14 te
 ruff clean. Bumped to v0.3.0 (frontmatter output shape changed: `date` no longer stamped on
 every record) and tagged. Friction: none — the 4 bugs and their fixes were each independently
 verifiable against a single RED test; no ambiguity encountered.
+
+## 2026-07-11 — executor (Sonnet)
+
+Worked ROADMAP id:46b6 sub-item INV3b — find-dump sweep core, shipped as a second plugin
+`inventory-finddump` in this repo's multi-doc `plugin.yaml` (the zkm-stt `stt`/`stt-wa`
+pattern), module `finddump.py`. Per the RATIFIED design (`docs/inv3-lane-c-design.md`
+§Prior art), this is a thin `fd`-adapter, not a cataloger: `_list_files()` shells out to
+`fd --type f --strip-cwd-prefix` when `fd`/`fdfind` is on PATH (already `.gitignore`/
+hidden/`.git`-aware), else falls back to a pure-Python `pathspec`-driven `os.walk` with a
+small default ignore set (`.*`, `node_modules/`, `.cache/`, `__pycache__/`, `.venv/`,
+`site-packages/`); zkm's existing BM25+git remains the catalog+search+temporal layer.
+Wrote 9 RED tests first (`tests/test_finddump.py`, confirmed failing on
+`ModuleNotFoundError: finddump` before implementing), all green after: a known filename
+token is findable in a shard, `.git` internals + `node_modules` are excluded, a 2500-file
+directory splits into >1 shard each under the ~2000-entry/~256 KB cap, an unchanged
+re-sweep is a byte-identical no-op AND leaves `last_swept` untouched, inserting one file
+dirties only its own directory's shard (locality-preserving packing anchored on the
+top-level directory, per design §Q4), the per-drive summary carries `source:
+inventory-finddump` + the shared `scope:inventory.drive` entity + `file_count`, a
+configured root absent on disk is skipped gracefully (no raise, no partial shards
+written), both `plugin.yaml` docs still discover (`inventory` + `inventory-finddump`
+confirmed via `zkm.convert.list_plugins()`), and one optional test exercises the real
+`fd` backend against the pathspec fallback (skipped — no `fd`/`fdfind` on this host).
+Added `pathspec>=0.12` to `pyproject.toml` + regenerated `uv.lock`. `_validate_id` is
+reused from `convert.py` (INV1/INV2 helper) for the finddump `drives:` config too.
+`git ls-files` tracked-only listing was NOT implemented — deferred per the task's own
+guidance, since `fd`'s default `.gitignore`+hidden skip already covers the git-objects
+case for v1; left as a note for INV3c/INV3d if a real repo-inside-a-drive case demands
+it. Bumped to v0.4.0 (new plugin/feature) across `pyproject.toml`, both `plugin.yaml`
+docs, and `PLUGIN_VERSION` in both `convert.py` and `finddump.py`; tagged `v0.4.0`.
+Full suite 23 passed / 1 skipped, ruff clean on `convert.py finddump.py tests/
+conftest.py`. Friction: none of substance — the one subtlety was confirming core's
+`_load_plugin_module` always loads `<plugin-dir>/convert.py` regardless of which
+declared plugin name is invoked (the `module:` key in a non-primary doc is not yet
+wired to dispatch, matching zkm-stt's `stt-wa` which is likewise only exercised via a
+direct `import stt_wa` in its own tests, never through `zkm convert stt-wa`); this repo's
+tests follow the same proven pattern (`import finddump as fd`, direct unit-level calls)
+rather than assuming an unbuilt core dispatch path — a pre-existing core-level gap, out
+of scope for this item.
