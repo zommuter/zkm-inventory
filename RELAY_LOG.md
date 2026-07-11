@@ -141,3 +141,21 @@ direct `import stt_wa` in its own tests, never through `zkm convert stt-wa`); th
 tests follow the same proven pattern (`import finddump as fd`, direct unit-level calls)
 rather than assuming an unbuilt core dispatch path — a pre-existing core-level gap, out
 of scope for this item.
+
+## 2026-07-11 — reviewer (claude-opus-4-8, live-verify + fix, v0.4.1)
+
+After the core `module:` dispatch gap was fixed (core id:3f86), I ran `inventory-finddump`
+end-to-end via the REAL CLI (`zkm convert inventory-finddump` on a synthetic content-root) —
+which the direct-import unit tests could not exercise. Two bugs those tests masked:
+(1) `finddump.py` did `from convert import _validate_id` — works under conftest's sys.path shim
+but ModuleNotFound's under real `spec_from_file_location` dispatch → inlined a self-contained
+`_validate_id` (no sibling import). (2) `_write_summary` bumped `last_swept` on EVERY re-sweep
+(its `existing.content == body` check is fragile across the frontmatter dumps→load round-trip),
+so each no-op sweep produced a noise commit → replaced with a render-trial-using-prior-timestamp
++ byte-compare, so a true no-op leaves the file untouched. Strengthened
+`test_resweep_unchanged_is_noop_and_last_swept_stable` to advance a faked clock between sweeps
+(subclassed datetime so `now()` moves while `fromtimestamp()` still works) — it was false-green
+because both sweeps landed in the same wall-clock second. Verified live: first convert ingests 2
+files (`.git/objects` + `node_modules` skipped by the pathspec fallback), re-convert reports
+"Converted 0 file(s)" with a clean tree. 22 passed + 1 skipped; ruff clean. Bumped 0.4.0 → 0.4.1
+(patch: two shipped-bug fixes).

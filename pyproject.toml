@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "zkm-inventory"
-version = "0.4.0"
+version = "0.4.1"
 description = "zkm plugin: convert a hand-authored asset-inventory manifest (drives + hardware) to searchable markdown"
 license = "MIT"
 requires-python = ">=3.11"

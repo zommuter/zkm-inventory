@@ -103,7 +103,23 @@ def test_every_shard_is_under_the_cap(tmp_path: Path):
 
 # --- (4) re-sweep of an unchanged tree is a byte-identical git no-op -------
 
-def test_resweep_unchanged_is_noop_and_last_swept_stable(tmp_path: Path):
+def test_resweep_unchanged_is_noop_and_last_swept_stable(tmp_path: Path, monkeypatch):
+    # Advance the clock BETWEEN sweeps so this catches the real bug (a naive
+    # implementation bumps last_swept every run). Subclass datetime so now()
+    # advances while fromtimestamp() (used for file mtimes) still works.
+    import datetime as _dt
+
+    class _FakeDT(_dt.datetime):
+        _n = _dt.datetime(2026, 1, 1, 10, 0, 0)
+
+        @classmethod
+        def now(cls, tz=None):
+            cur = cls._n
+            cls._n = cls._n + _dt.timedelta(hours=1)
+            return cur
+
+    monkeypatch.setattr(fd, "datetime", _FakeDT)
+
     root = tmp_path / "drive"
     _make_tree(root)
     store = tmp_path / "store"
@@ -114,7 +130,7 @@ def test_resweep_unchanged_is_noop_and_last_swept_stable(tmp_path: Path):
     before_shards = _shard_bodies(store, "example-media")
     before_last_swept = frontmatter.load(summary).metadata["last_swept"]
 
-    second = fd.convert(store, _drives_config(root))
+    second = fd.convert(store, _drives_config(root))  # now() returns a LATER time
 
     after_summary = summary.read_text(encoding="utf-8")
     after_shards = _shard_bodies(store, "example-media")
@@ -123,7 +139,9 @@ def test_resweep_unchanged_is_noop_and_last_swept_stable(tmp_path: Path):
     assert second == [], "an unchanged re-sweep must report no created/changed paths"
     assert before_shards == after_shards
     assert before_summary == after_summary
-    assert before_last_swept == after_last_swept, "last_swept must not bump when nothing changed"
+    assert before_last_swept == after_last_swept, (
+        "last_swept must not bump when nothing changed, even as wall-clock advances"
+    )
 
 
 # --- (5) inserting one file dirties only its dir's shard --------------------

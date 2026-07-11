@@ -35,10 +35,30 @@ import pathspec
 
 from zkm.atomic import write_atomic
 
-from convert import _validate_id  # reuse INV1/INV2 id validation (ROADMAP id:86b5)
-
 PLUGIN_NAME = "inventory-finddump"
-PLUGIN_VERSION = "0.4.0"
+PLUGIN_VERSION = "0.4.1"
+
+
+def _validate_id(record: dict, kind: str, seen_ids: set[str]) -> str:
+    """Validate and return ``record["id"]``; raise ValueError on any problem.
+
+    Self-contained copy of the INV1/INV2 helper (ROADMAP id:86b5) — a plugin
+    module loaded by file path via ``spec_from_file_location`` cannot ``import
+    convert`` (its sibling is not on ``sys.path`` under real CLI dispatch), so
+    this must not depend on ``convert.py``.
+    """
+    rid = record.get("id")
+    if rid is None or not str(rid).strip():
+        raise ValueError(f"inventory-finddump: {kind} record missing required 'id': {record!r}")
+    rid = str(rid).strip()
+    if "/" in rid or "\\" in rid or ".." in rid:
+        raise ValueError(
+            f"inventory-finddump: {kind} id {rid!r} is not a safe slug (no '/', '\\', '..')"
+        )
+    if rid in seen_ids:
+        raise ValueError(f"inventory-finddump: duplicate {kind} id {rid!r}")
+    seen_ids.add(rid)
+    return rid
 
 # Shard packing budget (design §Q1/§Q4): bounded md size, natural git-diff
 # granularity. A group (top-level directory) exceeding either limit is split
@@ -289,22 +309,18 @@ def _write_summary(
         "total_bytes": total_bytes,
     }
 
-    if summary_path.exists():
-        existing = frontmatter.load(summary_path)
-        existing_meta_no_ts = {k: v for k, v in existing.metadata.items() if k != "last_swept"}
-        same_content = (
-            not shards_changed
-            and existing.content == body
-            and existing_meta_no_ts == candidate_meta
-        )
-        if same_content:
+    new_ts = datetime.now().replace(microsecond=0).isoformat()
+
+    # No-op detection that survives the frontmatter dumps->load round-trip AND is
+    # immune to time advancing: render a TRIAL with the PRIOR last_swept and
+    # byte-compare against the file on disk. If identical (and no shard changed),
+    # nothing actually changed -> leave the file (and its old last_swept) untouched.
+    if summary_path.exists() and not shards_changed:
+        prior_ts = frontmatter.load(summary_path).metadata.get("last_swept", new_ts)
+        trial = frontmatter.dumps(frontmatter.Post(body, **{**candidate_meta, "last_swept": prior_ts}))
+        if summary_path.read_text(encoding="utf-8") == trial:
             return None
 
-    meta = {**candidate_meta, "last_swept": datetime.now().replace(microsecond=0).isoformat()}
-    content = frontmatter.dumps(frontmatter.Post(body, **meta))
-
-    if summary_path.exists() and summary_path.read_text(encoding="utf-8") == content:
-        return None
-
+    content = frontmatter.dumps(frontmatter.Post(body, **{**candidate_meta, "last_swept": new_ts}))
     write_atomic(summary_path, content)
     return summary_path
