@@ -16,7 +16,7 @@ Shared rules for every item below:
 
 ## Items
 
-- [ ] **INV1 — drives lane: render `inventory/drives/<id>.md`** [ROUTINE] <!-- id:82a2 -->
+- [x] **INV1 — drives lane: render `inventory/drives/<id>.md`** [ROUTINE] <!-- id:82a2 -->
   Implement `convert(store_path, config, *, progress=None)` for the manifest's `drives:` list.
   Read the YAML manifest at `config["manifest"]` (relative paths resolve against `store_path`;
   raise `FileNotFoundError` if absent). For each drive record write `inventory/drives/<id>.md`
@@ -29,7 +29,7 @@ Shared rules for every item below:
   no-op; return only newly created/changed paths). **Done-check:**
   `uv run pytest tests/test_inventory.py -k "drives or idempotent or missing_manifest"` green.
 
-- [ ] **INV2 — devices lane: render `inventory/devices/<id>.md`** [ROUTINE] <!-- id:5697 -->
+- [x] **INV2 — devices lane: render `inventory/devices/<id>.md`** [ROUTINE] <!-- id:5697 -->
   Same pipeline for the manifest's `devices:` list → `inventory/devices/<id>.md`. Frontmatter
   `source: inventory`; typed `entities[]` including `{scope: inventory.device, type: device,
   value: <id>, canonical: <model>}`; put `status` (in-use|idle|dust-collecting|retired) into

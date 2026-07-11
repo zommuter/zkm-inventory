@@ -5,8 +5,8 @@ this file carries summary lines only. See core `id:e65e` for the umbrella item.
 
 ## Current
 
-- [ ] INV1 (id:82a2) — drives lane → `inventory/drives/<id>.md` (RED specs in tests). See ROADMAP.
-- [ ] INV2 (id:5697) — devices lane → `inventory/devices/<id>.md` + searchable status. See ROADMAP.
+- [x] INV1 (id:82a2) — drives lane → `inventory/drives/<id>.md`, shipped v0.2.0. See ROADMAP.
+- [x] INV2 (id:5697) — devices lane → `inventory/devices/<id>.md` + searchable status, shipped v0.2.0. See ROADMAP.
 - [ ] INV3 (id:46b6) — find-dump drive-content index (lane-c, fast-follow, HARD, gated on v1). See ROADMAP.
 
 ## Deferred

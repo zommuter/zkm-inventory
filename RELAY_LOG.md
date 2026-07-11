@@ -26,3 +26,33 @@ annex owns copy-count). Whole-disk annex-onboarding is the it-infra 3-2-1-backup
 
 Not budgeted this turn: implementation (INV1/INV2 are the executor's), INV3 design decomposition,
 the annex enrichment seam (dormant).
+
+## 2026-07-11 22:30 — executor (sonnet)
+
+Worked id:82a2 (INV1) and id:5697 (INV2) — implemented `convert()`: loads the YAML manifest
+(`config["manifest"]`, resolved against `store_path`; raises `FileNotFoundError` when absent),
+renders `inventory/drives/<id>.md` and `inventory/devices/<id>.md` via a shared `_write_record`
+helper (`_build_entities`/`_render_body` dispatch on `kind`) using `zkm.atomic.write_atomic`.
+Drives get a `scope:inventory.drive` `type:drive` entity (+ `type:place` when `location` is
+set) and a body table (label/capacity/purpose/data_classes/location/last_sync/offsite); devices
+get a `scope:inventory.device` `type:device` entity, `status` in both `tags:` and the body table.
+Idempotence: `_write_record` compares the rendered content against the existing file and skips
+the write (returns `None`, excluded from the created-paths result) when unchanged — verified by
+`test_rerun_is_idempotent`. All 8 red tests pass; full suite green; ruff clean.
+
+Smoke-tested via the real CLI (`zkm init` + `zkm-config.yaml` with a top-level `inventory:`
+section — NOT `plugins: {inventory: ...}`, per `StoreConfig.for_plugin`'s bare-name lookup —
++ `zkm convert inventory`) against the fixture manifest: both `inventory/drives/` and
+`inventory/devices/` .md render correctly with the expected frontmatter/body. Observed (not
+fixed, out of scope for this session): the zkm-ner amender that runs as part of `zkm convert`
+picks up spurious `scope:body` entities from the rendered markdown table syntax (e.g. treating
+the "Value"/"Location"/"Status" table-header cells as org/person mentions) and its write-back
+then defeats CLI-level idempotence on a second `zkm convert inventory` (our own `_write_record`
+idempotence — verified in isolation by the unit test with no amenders — is unaffected; the
+churn is the amender rewriting the file between runs, a pre-existing NER-quality/amender
+interaction, not an INV1/INV2 regression).
+
+Bumped 0.1.0 → 0.2.0 (`pyproject.toml`, `plugin.yaml`, `PLUGIN_VERSION`), `uv lock`, tagged
+`v0.2.0` in the same commit. Friction: none — the spec matched the red tests cleanly; the only
+surprise was the `zkm-config.yaml` top-level-key convention (not nested under `plugins:`),
+discovered during the CLI smoke test rather than from written docs.
