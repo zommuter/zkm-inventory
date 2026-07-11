@@ -29,11 +29,12 @@ for mnt in "$@"; do
   echo "  fs UUID:  ${uuid:-<unknown>}"
   echo "  fs LABEL: ${label:-<unknown>}"
 
-  # Single pass: count files and sum (path-length + 30) as the listing-line estimate.
-  read -r nfiles est_bytes < <(
-    find "$mnt" -type f -printf '%P\n' 2>/dev/null \
-      | awk '{ n++; b += length($0) + 30 } END { print n+0, b+0 }'
-  )
+  # ONE walk to a temp file, then cheap text ops (avoids a per-dir find storm that
+  # trips on huge trees; robust to permission errors + SIGPIPE under `set -e`).
+  tmp=$(mktemp)
+  find "$mnt" -type f -printf '%P\n' 2>/dev/null > "$tmp" || true
+  nfiles=$(wc -l < "$tmp")
+  est_bytes=$(awk '{ b += length($0) + 30 } END { print b+0 }' "$tmp")
   echo "  files:            ${nfiles}"
   echo "  est. listing size: $(fmt_bytes "$est_bytes")  (git-tracked, pre-compression)"
 
@@ -45,10 +46,8 @@ for mnt in "$@"; do
   echo "  tier hint:        ${hint}"
 
   echo "  biggest top-level dirs by file count:"
-  find "$mnt" -mindepth 1 -maxdepth 1 -type d -printf '%P\n' 2>/dev/null \
-    | while IFS= read -r d; do
-        c=$(find "$mnt/$d" -type f 2>/dev/null | wc -l)
-        printf '%s\t%s\n' "$c" "$d"
-      done | sort -rn | head -10 | sed 's/^/    /'
+  awk -F/ '{ c[$1]++ } END { for (d in c) print c[d] "\t" d }' "$tmp" \
+    | sort -rn | head -10 | sed 's/^/    /' || true
+  rm -f "$tmp"
   echo
 done

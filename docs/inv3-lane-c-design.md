@@ -264,3 +264,45 @@ routed:cfc1.)*
 INV3 (id:46b6) stays **GATED** until INV1 (id:82a2) + INV2 (id:5697) are green and pushed.
 Do not dispatch INV3a–d until then. INV3a is central (core repo) even though it unblocks a
 plugin lane — file it in `~/src/zkm`'s ledger, not the plugin's, per the boundary rule.
+
+---
+
+## Pilot calibration (2026-07-11 — external SSD `/dev/sda`, USB)
+
+First real measurement (via `scripts/pilot-drive-count.sh`). Three subtrees:
+
+| Subtree | Files | Est. listing | Character |
+|---|---|---|---|
+| `Manjaro` (1 TB ext4, full OS install) | **3,025,462** | 362 MB | rootfs — `home` 1.89M · `usr` 1.04M · `opt` 55k · `var` 30k |
+| `Cee` (256 GB NTFS, Windows data) | **1,568,845** | 197 MB | software — `Program Files` 216k · `gcdev64` 109k · `Program Files (x86)` 108k · MiKTeX · msys64 |
+| `Manjaro/home` only | **1,893,957** | ~230 MB | dev churn (see below) |
+
+**home-only prune breakdown** (dominant noise): `.cache` 350k · `node_modules` 229k · `.cargo` 78k
+· `.rustup` 49k · `site-packages` 42k · `.npm` 31k · `__pycache__` 20k · `.venv` 13k. Residual after
+pruning ALL of those = **1,125,925** — still >1M.
+
+**Calibration conclusions:**
+1. **The ~1M-file annex threshold is well-calibrated** — every real partition measured sits at/above
+   it, so T1-git-only (no escape hatch) would bloat. The annex-raw+thin-summary escape-hatch is
+   **confirmed needed**, not hypothetical.
+2. **These are system/software drives, not the media drives find-dump targets.** find-dump's value is
+   locating movies/photos; pointing it at an OS or a Windows `Program Files` tree is mostly noise.
+   → INV3b needs a **per-drive content-root(s)** config (index `home/tobias/Videos`, not all of `/usr`)
+   AND a heavy default **prune-set**.
+3. **Pruning helps but is insufficient alone** (home 1.9M → 1.1M) → content-roots + prune-set + annex
+   escape-hatch are all warranted; none alone suffices.
+4. **Calibrated default prune-set for INV3b:** `node_modules`, `.cache`, `.cargo`, `.rustup`, `.npm`,
+   `site-packages`, `__pycache__`, `.venv`, `.git/` internals, `.mozilla`; plus system trees when a
+   whole partition is swept: `Program Files*`, `Windows`, `$Recycle.Bin`, `System Volume Information`,
+   `/usr`, `/var`, `/opt`, `/proc`, `/sys`. User-overridable per drive.
+
+Net: **INV3b default = content-roots (opt-in per drive) + prune-set, T1-git shards; auto-fall-back to
+annex-raw+thin-summary when a swept root still exceeds ~1M files / ~100 MB.**
+
+> **⚠️ Do NOT hand-roll the prune-set / walker (2026-07-11).** The list above is *observed noise*, not
+> a mechanism. Distinguishing "real files" from metafiles (`.git/objects`, `node_modules`, caches) is a
+> solved problem — **prior-art survey pending before INV3b is built.** Candidate reuse: `.gitignore`-aware
+> walkers (`fd`/`ripgrep`'s ignore engine, which already skip `.git`/hidden and respect `.ignore`),
+> `git ls-files` for tracked-only listing inside repos, and the offline **disk-catalog** genre
+> (Basenji/GWhere/VVV) which already solves "catalog removable volumes → search which volume holds file X".
+> INV3b's walker + ignore layer should be *chosen from* that prior art, not invented here.
