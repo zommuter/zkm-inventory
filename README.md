@@ -51,6 +51,10 @@ devices:
     purpose: "Kodi media player"
 ```
 
+See [`docs/cataloguing-a-drive.md`](docs/cataloguing-a-drive.md) for a
+practical walkthrough of using `inventory-finddump` (lane-c) to catalogue a
+drive's content into searchable per-drive markdown.
+
 ## Install / develop
 
 ```bash
