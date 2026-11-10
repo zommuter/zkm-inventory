@@ -45,7 +45,7 @@ import pathspec
 from zkm.atomic import write_atomic
 
 PLUGIN_NAME = "inventory-finddump"
-PLUGIN_VERSION = "0.6.0"
+PLUGIN_VERSION = "0.7.0"
 
 
 def _validate_id(record: dict, kind: str, seen_ids: set[str]) -> str:

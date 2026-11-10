@@ -134,12 +134,15 @@ Shared rules for every item below:
 
 ## Pilot (CALIBRATES the annex threshold — does NOT gate INV3b)
 
-- [ ] **INV3-PILOT — measure real HDD contents to calibrate the annex flip-threshold + prune globs.**
+- [x] **INV3-PILOT — measure real HDD contents to calibrate the annex flip-threshold + prune globs.**
   Mount ≥1 real external drive and measure file count + total listing size
   (`scripts/pilot-drive-count.sh <mount>`) to tune where T1-git-shards flip to
   annex-raw+thin-summary (default threshold ~1M files / ~100 MB) and which prune/exclude globs
   are worth it. HUMAN-run (needs a physical drive). **Calibration only — INV3b ships regardless**
   (T1-git is the ratified default). Feeds `docs/inv3-lane-c-design.md` §Q2.
+  - **Done 2026-11-10** (owner-closed): two pilots recorded in `docs/inv3-lane-c-design.md`:
+    2026-07-11 SSD system partitions (1.6M to 3.0M files: annex escape-hatch needed) and 2026-11-10
+    media HDD content roots (54,356 files / ~6.4 MB: T1 git). Threshold unchanged.
 
 ## Deferred / dormant (not dispatchable yet)
 

@@ -15,11 +15,11 @@ this file carries summary lines only. See core `id:e65e` for the umbrella item.
   offline drives skipped no-raise), INV3d v0.6.0 (git-annex pointer exclusion — leg-disjointness
   with the future `git annex whereis` seam; `git ls-files` tracked-only listing deferred as
   unnecessary given `fd`'s default `.gitignore`+hidden skip). Storage = T1-git shards (RATIFIED
-  default) + prune globs; annex escape-hatch evidence-gated (still open, see INV3-PILOT). See
+  default) + prune globs; annex escape-hatch evidence-gated (see INV3-PILOT). See
   ROADMAP.
-- [ ] INV3-PILOT — measure a real HDD's file count/size (scripts/pilot-drive-count.sh) to CALIBRATE the annex flip-threshold + prune globs. HUMAN-run. Does NOT gate INV3b.
-- [x] INV4 (id:52cf) — devices schema for project_manager's repurposing decision (its id:62bb): `condition`/`power`/`connectivity`/`last_used`/`blockers` rows, owner `complete_as_of` attestation + one-list `inventory/devices.md` roster, unknown manifest keys are a loud error (owner rulings 2026-11-10). Commit a66ecdc. <!-- routed:ee27 -->
-- [ ] INV4-WALK (id:4654) — HUMAN: walk every RPi + IoT device, write the store manifest (`plugins.inventory.manifest` in `zkm-config.yaml`), set `complete_as_of`, run `zkm convert inventory`; then report to project_manager via inbox citing id:62bb.
+- [x] INV3-PILOT -- measure a real HDD's file count/size (scripts/pilot-drive-count.sh) to CALIBRATE the annex flip-threshold + prune globs. Closed 2026-11-10 (v0.7.0): media-HDD content roots 54,356 files / ~6.4 MB, so T1 git; threshold unchanged. Results in docs/inv3-lane-c-design.md.
+- [x] INV4 (id:52cf) -- devices schema for project_manager's repurposing decision (its id:62bb): `condition`/`power`/`connectivity`/`last_used`/`blockers` rows, owner `complete_as_of` attestation + one-list `inventory/devices.md` roster, unknown manifest keys are a loud error (owner rulings 2026-11-10). Shipped v0.7.0. <!-- routed:ee27 -->
+- [x] INV4-WALK (id:4654) -- device manifest drafted by it-infra, owner-approved: 7 devices in `~/knowledge/inventory.yaml` (knowledge 143bb236600), converted (4c37b024888); project_manager notified via inbox routed:bc17. `complete_as_of` still unset (owner's to add). M5Stack + drawer gear follow-up is it-infra id:5acf.
 
 ## Deferred
 
