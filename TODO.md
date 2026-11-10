@@ -4,8 +4,8 @@
 
 - [x] [HARD] INV5 drive identity by hardware serial <!-- id:3423 -->
 - [ ] [ROUTINE] INV6 prune rendered records removed from the manifest <!-- id:d0a5 -->
-- [ ] [ROUTINE] INV7 scrub real identifiers from tracked tests/docs (public repo) <!-- id:a124 -->
-- [ ] [INPUT - decision] INV7b rewrite published git history to drop the real identifiers, or accept them as already public? <!-- id:d142 -->
+- [x] [ROUTINE] INV7 scrub real identifiers from tracked tests/docs (public repo) <!-- id:a124 -->
+- [x] [INPUT - decision] INV7b history rewrite: no (owner 2026-11-10), scrub current state only <!-- id:d142 -->
 
 ## Done
 

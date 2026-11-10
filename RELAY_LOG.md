@@ -284,3 +284,14 @@ hand; a section briefly overwritten with a placeholder) and were corrected befor
 ## 2026-11-10 20:01 -- integrate (claude-opus-5-5)
 
 handoff C1-C5: docs, items-only TODO, INV5/INV6/INV7 specs, INV5 built; review window left open (self-authored code since a66ecdc)
+
+## 2026-11-10 -- owner-directed session (opus)
+
+Worked id:a124 -- scrubbed the real identifiers from the canned lsblk transcript in
+`tests/test_finddump.py` (values changed in transcript and asserts together) and from two
+docs. Owner decided id:d142: no history rewrite, current state only. The id:a124 spec
+was mine (handoff C3) and needed one fix of my own: it flagged its own triangulation
+examples, which only showed once the file was tracked; it now skips itself. Review should
+check that exclusion does not hide anything else.
+refactor: none needed -- value swaps and one skip-set entry.
+Friction: the self-flagging spec bug above.

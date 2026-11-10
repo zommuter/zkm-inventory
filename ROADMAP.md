@@ -178,7 +178,7 @@ Shared rules for every item below:
   - **Context**: `convert.py` `convert()`; ARCHITECTURE.md §Known gap. Never prune inside
     `inventory/find-dump/` (finddump's dir, different plugin).
 
-- [ ] [ROUTINE] **INV7 — scrub real identifiers from tracked tests and docs** <!-- id:a124 -->
+- [x] [ROUTINE] **INV7 — scrub real identifiers from tracked tests and docs** <!-- id:a124 -->
   - **Acceptance**: no tracked file contains the owner's user name, a real filesystem UUID
     or a real disk serial. Replace them with obvious placeholders that keep every assertion
     meaning the same: `tests/test_finddump.py::test_enumerate_mounts_real_lsblk_parsing`
@@ -192,7 +192,7 @@ Shared rules for every item below:
   - **Context**: this repo is PUBLIC. Rewriting already-published history is NOT part of this
     item; that is the owner decision id:d142.
 
-- [ ] [INPUT - decision] **INV7b — rewrite published history to drop the real identifiers?** <!-- id:d142 -->
+- [x] [INPUT - decision] **INV7b — rewrite published history to drop the real identifiers?** Owner 2026-11-10: no history rewrite; scrub the current state only (INV7), the old commits may keep it. <!-- id:d142 -->
   - **Question for the owner**: the identifiers INV7 scrubs from HEAD are already on GitHub in
     older commits (the lsblk test transcript since v0.5.0, two docs since 2026-07-11).
     Rewrite and force-push history, or accept them as public? Force-pushing a published repo
