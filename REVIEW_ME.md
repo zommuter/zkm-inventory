@@ -18,18 +18,22 @@ Max ~10 open boxes; the reviewer prunes resolved ones each review turn.
 
 ## Handoff 2026-11-10
 
-- [ ] **INV6 prune also deletes the removed record's amender sidecars.** When a record
+- [x] **INV6 prune also deletes the removed record's amender sidecars.** When a record
   leaves the manifest, its `<md>.amendments.json` (+ `.lock`) go with the md, so any NER
   or tag write-back for that asset is gone too. Alternative: keep sidecars as orphans for
   core `zkm gc` to sweep. Chosen: delete, since a sidecar for a non-existent md has no
   reader. Encoded in: `test_sidecars_of_pruned_record_are_removed_kept_ones_untouched`.
 
-- [ ] **INV5 ambiguous serial raises, aborting the whole finddump convert.** A `serial:`
+  Owner 2026-11-10 (relay human batch 1): delete with the md, as shipped in v0.8.0.
+
+- [x] **INV5 ambiguous serial raises, aborting the whole finddump convert.** A `serial:`
   that matches two or more mounted partitions with no `label`/`uuid` is a `ValueError`
   naming the drive id, which stops the sweep of every other drive in that run too.
   Alternative: skip that one drive with a warning. Chosen: raise, matching the manifest
   strictness ruling (a config error should fail loudly). Encoded in:
   `test_serial_with_two_partitions_and_no_selector_raises`.
+
+  Owner 2026-11-10 (relay human batch 1): raise and abort the run, consistent with the strict-manifest ruling.
 
 - [ ] **A failing `lsblk` reads as "every drive offline", silently.** Pre-existing design
   (`_enumerate_mounts` returns `[]` on any failure; INV5's `_enumerate_serials` is specced

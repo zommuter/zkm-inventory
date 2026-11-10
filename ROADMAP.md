@@ -16,6 +16,21 @@ Shared rules for every item below:
 
 ## Items
 
+- [ ] [ROUTINE] **INV8 — finddump: a failing `lsblk` is loud, never "every drive offline"** <!-- id:0a98 -->
+  - **Acceptance**: when at least one configured drive uses `mount:` and drive enumeration
+    cannot run (`lsblk` not on PATH, or it exits non-zero), `finddump.convert()` raises
+    `RuntimeError` whose message names `lsblk` and the cause. Same for the serial lookup when a
+    drive uses `mount: {serial: ...}`. A drive that is simply not plugged in (lsblk works,
+    nothing matches) still skips quietly with `[]`; a config with only explicit `roots:` never
+    calls lsblk. Unparsable individual lines may still be skipped.
+  - **Tests**: `tests/test_finddump_lsblk_loud.py` (`# roadmap:0a98`), currently RED (3 red,
+    2 constraints that already pass).
+  - **Done-check**: `pytest tests/test_finddump_lsblk_loud.py` then the FULL suite + ruff.
+  - **Context**: owner ruling 2026-11-10 (relay human, REVIEW_ME batch 1). `finddump.py`
+    `_lsblk_rows` (shared by `_enumerate_mounts` / `_enumerate_serials`) currently returns `[]`
+    on any failure; update its docstring and ARCHITECTURE/design §Q3 wording to match. Existing
+    tests monkeypatch `_enumerate_mounts` / `_enumerate_serials` and must stay green unchanged.
+
 ## Deferred / dormant (not dispatchable yet)
 
 - **git-annex redundancy enrichment for the drives lane** — read-only `git annex whereis`/`info`

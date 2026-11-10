@@ -10,6 +10,7 @@
 - [x] [HARD] relay review of the 2026-11-10 self-authored work from d33d1e6 -- DONE 2026-11-10: review relay-20261110-202900-570 widened its audit window to d33d1e6..HEAD and covered id:52cf/id:4654 (INV4), id:3423 (INV5) and id:003c (pilot) <!-- id:e16e -->
 - [x] [HARD] reviewer: minor bump to v0.8.0 at the next integrate (INV5 serial matching is user-visible) -- DONE: tag v0.8.0 and pyproject 0.8.0 landed 2026-11-10 <!-- id:5225 -->
 - [x] [INPUT - decision] push v0.8.0 + v0.8.1 (main + tags) to the public GitHub mirror? pool left them ratification-pending on fievel only (filed unattended by /wrapup relay-20261110-202900-570) <!-- id:b556 -->
+- [ ] [ROUTINE] INV8 finddump: a failing lsblk is loud, never every-drive-offline <!-- id:0a98 -->
 ## Done
 
 - [x] INV1 drives lane, shipped v0.2.0 <!-- id:82a2 -->
