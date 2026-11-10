@@ -524,7 +524,7 @@ wheels = [
 
 [[package]]
 name = "zkm"
-version = "0.27.1"
+version = "0.28.0"
 source = { editable = "../../" }
 dependencies = [
     { name = "charset-normalizer" },
