@@ -7,6 +7,7 @@
 - [x] [ROUTINE] INV7 scrub real identifiers from tracked tests/docs (public repo) <!-- id:a124 -->
 - [x] [INPUT - decision] INV7b history rewrite: no (owner 2026-11-10), scrub current state only <!-- id:d142 -->
 
+- [ ] [HARD] relay review of the 2026-11-10 self-authored work from d33d1e6 (review-window.sh resolves to the integrate ckpt, see routed:5b36) (filed unattended by /wrapup relay-20261110-201511-31289) <!-- id:e16e -->
 ## Done
 
 - [x] INV1 drives lane, shipped v0.2.0 <!-- id:82a2 -->
