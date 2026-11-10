@@ -20,6 +20,7 @@ this file carries summary lines only. See core `id:e65e` for the umbrella item.
 - [x] INV3-PILOT -- measure a real HDD's file count/size (scripts/pilot-drive-count.sh) to CALIBRATE the annex flip-threshold + prune globs. Closed 2026-11-10 (v0.7.0): media-HDD content roots 54,356 files / ~6.4 MB, so T1 git; threshold unchanged. Results in docs/inv3-lane-c-design.md.
 - [x] INV4 (id:52cf) -- devices schema for project_manager's repurposing decision (its id:62bb): `condition`/`power`/`connectivity`/`last_used`/`blockers` rows, owner `complete_as_of` attestation + one-list `inventory/devices.md` roster, unknown manifest keys are a loud error (owner rulings 2026-11-10). Shipped v0.7.0. <!-- routed:ee27 -->
 - [x] INV4-WALK (id:4654) -- device manifest drafted by it-infra, owner-approved: 7 devices in `~/knowledge/inventory.yaml` (knowledge 143bb236600), converted (4c37b024888); project_manager notified via inbox routed:bc17. `complete_as_of` still unset (owner's to add). M5Stack + drawer gear follow-up is it-infra id:5acf.
+- [ ] INV5 -- drive identity by hardware serial (adopted from core id:3423, it-infra id:a28d): finddump `mount:` gains an optional `serial:` (`ID_SERIAL_SHORT`), matched FIRST, with FS-UUID then label as fallbacks; record each partition's parent-disk serial so same-spindle siblings (e.g. Cee-834R + Manjaro-834R) are queryable. Motivated by 2026-11-10: Ell's reformat changed its FS-UUID and only the label match kept the sweep working; labels are reused across drives. <!-- id:3423 -->
 
 ## Deferred
 
