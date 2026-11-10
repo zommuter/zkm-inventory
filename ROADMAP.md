@@ -1,17 +1,17 @@
 # Roadmap <!-- relay-executor contract v6 -->
-
 Executor-facing task spec. Each item is sized for ONE Sonnet session. Items are
-the single source of truth — TODO.md carries only a summary line. Executors tick
-checkboxes; only the reviewer adds, removes, or re-scopes items.
+the single source of truth; TODO.md carries only a summary line. The integrator ticks
+checkboxes from your `worked_ids`; only the reviewer adds, removes, or re-scopes items.
 
 Shared rules for every item below:
 - Load `/relay executor` first; follow it exactly. Do NOT weaken/skip/delete a test to make it pass.
-- Run the FULL suite (`uv run pytest`) after your item goes green — no regressions.
-- `uv run ruff check convert.py tests/` clean on files you touch.
-- Fixtures must be published-generic: placeholder names only, no real personal data (this repo is PUBLIC).
-- Bump `version` in `pyproject.toml` + `plugin.yaml` + `PLUGIN_VERSION` and tag `vX.Y.Z`
-  in the same commit when behavior changes (loose-0.x: minor for features). One bump per
-  session is fine if you complete multiple items. A bump regenerates `uv.lock` — commit it.
+- Run the FULL suite after your item goes green: no regressions. In a relay worktree under
+  `~/.cache/relay/worktrees/` `uv run` cannot resolve the `../../` zkm path dep; use the main
+  checkout's venv from the worktree root (`<main>/.venv/bin/python -m pytest`), see CLAUDE.md.
+- `ruff check convert.py finddump.py tests/` clean.
+- Fixtures must be published-generic: placeholder names only, no real serials, UUIDs, user
+  names, paths or personal data (this repo is PUBLIC).
+- **Executors never bump the version.** The reviewer bumps at integrate (zkm relay rule).
 - Append a one-paragraph self-report to `RELAY_LOG.md` and commit it.
 
 ## Items
@@ -134,7 +134,7 @@ Shared rules for every item below:
 
 ## Pilot (CALIBRATES the annex threshold — does NOT gate INV3b)
 
-- [x] **INV3-PILOT — measure real HDD contents to calibrate the annex flip-threshold + prune globs.**
+- [x] **INV3-PILOT — measure real HDD contents to calibrate the annex flip-threshold + prune globs.** <!-- id:003c -->
   Mount ≥1 real external drive and measure file count + total listing size
   (`scripts/pilot-drive-count.sh <mount>`) to tune where T1-git-shards flip to
   annex-raw+thin-summary (default threshold ~1M files / ~100 MB) and which prune/exclude globs
@@ -143,6 +143,60 @@ Shared rules for every item below:
   - **Done 2026-11-10** (owner-closed): two pilots recorded in `docs/inv3-lane-c-design.md`:
     2026-07-11 SSD system partitions (1.6M to 3.0M files: annex escape-hatch needed) and 2026-11-10
     media HDD content roots (54,356 files / ~6.4 MB: T1 git). Threshold unchanged.
+
+## Open items (handoff 2026-11-10)
+
+- [ ] [HARD] **INV5 — finddump drive identity by hardware serial** <!-- id:3423 -->
+  - **Acceptance**: a drive's `mount:` block accepts an optional `serial:` (the disk's
+    `ID_SERIAL_SHORT`). A partition inherits its parent disk's serial. With `serial:` set,
+    only partitions on that disk are candidates; `label` (case-insensitive) or `uuid` then
+    picks one, either suffices; with neither, exactly one mounted candidate is used and two or
+    more raise `ValueError` naming the drive id. A serial with no mounted candidate (or no
+    candidate matching label/uuid) is offline: skipped, no raise, prior shards untouched.
+    Without `serial:` matching is unchanged (uuid OR label). The summary frontmatter records
+    `disk_serial` for every mount-resolved drive whose serial is known.
+  - **Design**: owner ruling 2026-11-10, ARCHITECTURE.md §Drive identity. Keep
+    `_enumerate_mounts()` returning `(uuid, label, mountpoint)` triples (existing tests pin
+    it); add `_enumerate_serials() -> dict[Path, str]` (mountpoint → disk serial, one
+    read-only `lsblk -o NAME,PKNAME,SERIAL,MOUNTPOINT -P -n`), monkeypatched to `{}` by an
+    autouse conftest fixture so no test shells out.
+  - **Tests**: `tests/test_finddump_serial.py` (`# roadmap:3423`), currently RED.
+  - **Done-check**: `pytest tests/test_finddump_serial.py` then the FULL suite + ruff.
+  - **Context**: `finddump.py` `_enumerate_mounts`/`_resolve_mount`/summary render;
+    `plugin.yaml` inventory-finddump config description. Origin: core id:3423, it-infra id:a28d.
+
+- [ ] [ROUTINE] **INV6 — prune rendered records removed from the manifest** <!-- id:d0a5 -->
+  - **Acceptance**: after rendering, `convert()` deletes every `inventory/{drives,devices}/<id>.md`
+    whose `id` is not in the manifest AND whose frontmatter `source` is `inventory`, plus that
+    md's `<md>.*` sidecar files (`.amendments.json`, its `.lock`). Files without
+    `source: inventory` are never touched. Deleted paths are included in the returned list
+    (so core's scoped `git add` stages the removal). `inventory/devices.md` is deleted too when
+    the manifest has no devices and no `complete_as_of`. A renamed id = old file removed, new
+    file written. An unchanged manifest still returns `[]`.
+  - **Tests**: `tests/test_inventory_prune.py` (`# roadmap:d0a5`), currently RED.
+  - **Done-check**: `pytest tests/test_inventory_prune.py` then the FULL suite + ruff.
+  - **Context**: `convert.py` `convert()`; ARCHITECTURE.md §Known gap. Never prune inside
+    `inventory/find-dump/` (finddump's dir, different plugin).
+
+- [ ] [ROUTINE] **INV7 — scrub real identifiers from tracked tests and docs** <!-- id:a124 -->
+  - **Acceptance**: no tracked file contains the owner's user name, a real filesystem UUID
+    or a real disk serial. Replace them with obvious placeholders that keep every assertion
+    meaning the same: `tests/test_finddump.py::test_enumerate_mounts_real_lsblk_parsing`
+    (UUIDs and `/run/media/<user>/…` paths in the canned lsblk transcript AND its asserts,
+    changed together), `docs/fable-session-review-2026-07-11.md` and
+    `docs/inv3-lane-c-design.md` (home-directory paths). The test must still pass unchanged
+    in what it checks (parsing shape, unmounted rows dropped).
+  - **Tests**: `tests/test_published_generic.py` (`# roadmap:a124`), currently RED: greps
+    tracked files for the owner's identifiers.
+  - **Done-check**: `pytest tests/test_published_generic.py` then the FULL suite + ruff.
+  - **Context**: this repo is PUBLIC. Rewriting already-published history is NOT part of this
+    item; that is the owner decision id:d142.
+
+- [ ] [INPUT - decision] **INV7b — rewrite published history to drop the real identifiers?** <!-- id:d142 -->
+  - **Question for the owner**: the identifiers INV7 scrubs from HEAD are already on GitHub in
+    older commits (the lsblk test transcript since v0.5.0, two docs since 2026-07-11).
+    Rewrite and force-push history, or accept them as public? Force-pushing a published repo
+    breaks any existing clone.
 
 ## Deferred / dormant (not dispatchable yet)
 
