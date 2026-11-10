@@ -58,33 +58,33 @@ calibration") found that sweeping whole system/OS partitions produces
 that are actually the point of cataloguing a drive. Scope narrowly.
 
 ```yaml
-# zkm-config.yaml (store-local, not the plugin repo)
-plugins:
-  inventory-finddump:
-    drives:
-      # Explicit mount path — always swept at this path.
-      - id: media-a1b2
-        roots:
-          - /mnt/media-archive
+# zkm-config.yaml (store-local, not the plugin repo).
+# Top-level key = plugin name; zkm's StoreConfig.for_plugin reads it there.
+inventory-finddump:
+  drives:
+    # Explicit mount path — always swept at this path.
+    - id: media-a1b2
+      roots:
+        - /mnt/media-archive
 
-      # Mount-detected — matched by filesystem UUID or label when online,
-      # skipped gracefully when the drive is unplugged.
-      - id: docs-a1b2
-        mount:
-          uuid: "<FS-UUID>"        # placeholder — real UUID stays local-only
-          label: "DOCS"
-        content_roots:
-          - Documents
-          - Pictures
+    # Mount-detected — matched by filesystem UUID or label when online,
+    # skipped gracefully when the drive is unplugged.
+    - id: docs-a1b2
+      mount:
+        uuid: "<FS-UUID>"        # placeholder — real UUID stays local-only
+        label: "DOCS"
+      content_roots:
+        - Documents
+        - Pictures
 
-      # A second drive, same physical spindle marker in the id suffix
-      # (illustrative — these two ids sharing "a1b2" would mean "same disk").
-      - id: media2-a1b2
-        mount:
-          label: "MEDIA2"
-        content_roots:
-          - Movies
-          - home/<user>/Videos
+    # A second drive, same physical spindle marker in the id suffix
+    # (illustrative — these two ids sharing "a1b2" would mean "same disk").
+    - id: media2-a1b2
+      mount:
+        label: "MEDIA2"
+      content_roots:
+        - Movies
+        - home/<user>/Videos
 ```
 
 `inventory-finddump` scopes the sweep to `content_roots` and then hands the

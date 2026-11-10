@@ -85,9 +85,8 @@ host worktree) so `zkm = { path = "../../", editable = true }` resolves.
 Set the manifest path in `$ZKM_STORE/zkm-config.yaml`:
 
 ```yaml
-plugins:
-  inventory:
-    manifest: inventory.yaml   # relative to store root, or an absolute path
+inventory:                   # top-level key = plugin name (zkm StoreConfig.for_plugin)
+  manifest: inventory.yaml   # relative to store root, or an absolute path
 ```
 
 Then `zkm convert inventory && zkm index`.
