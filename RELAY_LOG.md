@@ -295,3 +295,9 @@ examples, which only showed once the file was tracked; it now skips itself. Revi
 check that exclusion does not hide anything else.
 refactor: none needed -- value swaps and one skip-set entry.
 Friction: the self-flagging spec bug above.
+
+## 2026-11-10 -- executor (sonnet)
+
+Worked id:d0a5 -- convert() now prunes rendered records (source: inventory) whose id left the manifest, with their `<md>.*` sidecars, and the roster when no devices and no attestation; deleted paths are returned.
+refactor: none needed -- two small helpers added, nothing existing restructured.
+Friction: `uv run` fails in a worktree outside a zkm checkout (editable ../../ path), so I ran pytest and ruff from the main checkout's plugin .venv; I also applied the convert.py edit via a python script rather than Edit (rule slip, content verified by the green suite).

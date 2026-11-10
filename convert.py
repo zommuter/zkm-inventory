@@ -119,13 +119,46 @@ def convert(store_path: Path, config: dict, *, progress: ProgressCallback | None
         if progress:
             progress(item_num, total, rid)
 
+    roster_path = store_path / "inventory" / "devices.md"
     if devices or complete_as_of is not None:
-        roster = _write_device_roster(store_path / "inventory" / "devices.md",
-                                      devices, complete_as_of)
+        roster = _write_device_roster(roster_path, devices, complete_as_of)
         if roster is not None:
             created.append(roster)
+    elif _is_ours(roster_path):
+        created.extend(_remove_with_sidecars(roster_path))
+
+    created.extend(_prune_removed(drives_dir, seen_drive_ids))
+    created.extend(_prune_removed(devices_dir, seen_device_ids))
 
     return created
+
+
+def _is_ours(path: Path) -> bool:
+    """True if *path* is a markdown file this plugin rendered (``source: inventory``)."""
+    if not path.is_file():
+        return False
+    try:
+        return frontmatter.load(path).metadata.get("source") == PLUGIN_NAME
+    except Exception:  # unparseable file: not ours, never touch it
+        return False
+
+
+def _remove_with_sidecars(md: Path) -> list[Path]:
+    """Delete *md* and its ``<md>.*`` sidecars; return every deleted path."""
+    removed = [md]
+    removed.extend(sorted(md.parent.glob(f"{md.name}.*")))
+    for path in removed:
+        path.unlink()
+    return removed
+
+
+def _prune_removed(directory: Path, keep_ids: set[str]) -> list[Path]:
+    """Delete rendered records in *directory* whose id is no longer in the manifest."""
+    removed: list[Path] = []
+    for md in sorted(directory.glob("*.md")):
+        if md.stem not in keep_ids and _is_ours(md):
+            removed.extend(_remove_with_sidecars(md))
+    return removed
 
 
 # ── manifest validation ─────────────────────────────────────────────────────
