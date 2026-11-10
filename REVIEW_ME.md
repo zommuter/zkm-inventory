@@ -1,21 +1,61 @@
 # Human review queue <!-- budget: 15 min -->
-
 Judgment calls encoded in red tests — confirm or correct the interpretation.
 Max ~10 open boxes; the reviewer prunes resolved ones each review turn.
 
-- [ ] **Manifest is source-of-truth; the `.md` is a rendered view.** Unlike most
+## v1 handoff (2026-07-11)
+
+- [x] **Manifest is source-of-truth; the `.md` is a rendered view.** Unlike most
   zkm content (md = source of truth), the inventory `.md` files are *derived* from the
   hand-authored YAML manifest — editing an asset means editing the manifest and
   re-converting, not editing the `.md`. Confirm this inversion is acceptable (it mirrors
   every other plugin's source→md flow; the manifest is a first-class hand-authored source).
   Encoded in: `test_rerun_is_idempotent`. (handoff 2026-07-11)
 
+  Owner confirmed 2026-11-10 (handoff question batch).
+
 - [ ] **`id` is the dedup/idempotence key (not sha256).** Records are keyed by their
   stable `id` field; there is one manifest, not per-item source files, so re-running
   rewrites-in-place and is a git no-op when unchanged. Confirm `id` is the right key (vs.
   a content hash). Encoded in: `test_rerun_is_idempotent`. (handoff 2026-07-11)
 
-- [ ] **Device `status` lives in BOTH tags and body.** So `zkm search dust-collecting`
+  Owner asked for a recommendation 2026-11-10. Reviewer view: keep `id`. A content hash
+  changes on every edit, so each edit would read as delete+create: per-record git history
+  (zkm's temporal index) breaks, amender sidecars keyed by path are orphaned, and
+  `zkm search` results jump between file names. `id` is identity, the hash is version.
+  The real weakness of `id`-keying is renames/removals leaving stale files, which INV6
+  (id:d0a5) now covers. Still open: the owner decides.
+
+- [x] **Device `status` lives in BOTH tags and body.** So `zkm search dust-collecting`
   hits via BM25 whether it matches a tag or body text. Confirm dual placement is wanted
   (vs. a single canonical location). Encoded in:
   `test_dust_collecting_device_is_findable_by_status`. (handoff 2026-07-11)
+
+  Owner confirmed 2026-11-10 (handoff question batch).
+
+## Handoff 2026-11-10
+
+- [ ] **INV6 prune also deletes the removed record's amender sidecars.** When a record
+  leaves the manifest, its `<md>.amendments.json` (+ `.lock`) go with the md, so any NER
+  or tag write-back for that asset is gone too. Alternative: keep sidecars as orphans for
+  core `zkm gc` to sweep. Chosen: delete, since a sidecar for a non-existent md has no
+  reader. Encoded in: `test_sidecars_of_pruned_record_are_removed_kept_ones_untouched`.
+
+- [ ] **INV5 ambiguous serial raises, aborting the whole finddump convert.** A `serial:`
+  that matches two or more mounted partitions with no `label`/`uuid` is a `ValueError`
+  naming the drive id, which stops the sweep of every other drive in that run too.
+  Alternative: skip that one drive with a warning. Chosen: raise, matching the manifest
+  strictness ruling (a config error should fail loudly). Encoded in:
+  `test_serial_with_two_partitions_and_no_selector_raises`.
+
+- [ ] **A failing `lsblk` reads as "every drive offline", silently.** Pre-existing design
+  (`_enumerate_mounts` returns `[]` on any failure; INV5's `_enumerate_serials` is specced
+  the same way, returning `{}`). A missing or broken `lsblk` therefore produces a sweep
+  that changes nothing and says nothing, which conflicts with the owner's "never make a
+  failing command look like success" rule. Keep (graceful degrade, design §Q3), or make
+  enumeration failure loud? Not encoded in a test yet.
+
+- [ ] **INV7 scan matches shapes, not values.** `tests/test_published_generic.py` flags
+  home/media-mount paths under a real-looking user name and UUID/16-hex serials with more
+  than two distinct hex digits; it cannot recognise arbitrary disk serials (no fixed
+  shape), and never spells out the real values (that would republish them). Acceptable as
+  the guard, with disk serials left to review?
