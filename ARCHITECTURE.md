@@ -34,7 +34,7 @@ so editing it is expected.
 |------|----------------|
 | **drives** (a, v1) | OPTIONAL redundancy enrichment for the *annex-managed subset* of drive contents, via read-only `git annex whereis`/`info`. **Dormant** — 0 annex-managed drives today; built only once ≥2 exist (observe-before-preventing). |
 | **devices** (b, v1) | **None, ever.** A Raspberry Pi is not annexed content. Pure hand-authored descriptive md. |
-| **find-dump** (c, fast-follow) | **Independent.** Mount a drive, record its file listing → searchable per-drive content index (`zkm search "<title>"` → which drive). Exists *for* the bulk non-annex content annex-`whereis` never sees; complementary to lane-a's seam. ROADMAP id:46b6. |
+| **find-dump** (c, shipped as the `inventory-finddump` plugin) | **Independent.** Mount a drive, record its file listing → searchable per-drive content index (`zkm search "<title>"` → which drive). Exists *for* the bulk non-annex content annex-`whereis` never sees; complementary to lane-a's seam. Design: `docs/inv3-lane-c-design.md`. |
 
 **sync ≠ backup.** git-annex `whereis`/`numcopies` tells you *redundancy*
 (copy-count). It does **not** tell you *freshness* of a one-way mirror — a drive
@@ -44,6 +44,48 @@ copy-count. The manifest owns freshness; git-annex owns redundancy.
 **Shared remote registry.** When the annex seam activates, the drives it reads
 are the SAME named annex remotes that `zkm push` (core id:998b) and the future
 `zkm fetch` (routed:12fc) use — one registry, not a private one.
+
+## Manifest strictness: unknown keys are an error (owner ruling 2026-11-10)
+
+Every key the manifest may carry is allowlisted (`_MANIFEST_KEYS`, `_RECORD_KEYS`); any
+other key raises `ValueError` naming it. **Why:** the md is a pure render of the manifest,
+so a silently-dropped key is silently-lost data, and the commonest manifest error is a
+typo (`conditon:`, a singular `device:` that would drop the whole list). **Cost accepted:**
+a new field must be added to the allowlist before a manifest may use it. **Rejected:**
+warn-and-render (easy to miss in a convert log); silent drop (the pre-2026-11-10
+behaviour, which is how the gap was found).
+
+## Device roster and the completeness attestation
+
+Besides one md per device, the devices lane renders `inventory/devices.md`: one table row
+per device plus the manifest-level `complete_as_of` date. **Why:** a downstream decision
+(project_manager's hardware repurposing, its id:62bb) needs "not listed" to mean "not
+owned", and only the owner can assert that. So the attestation is an owner-set date that
+code never infers; without it the roster says "NOT attested". The roster sits BESIDE
+`devices/`, not inside it, so no record `id` can collide with it. **Rejected:** stamping
+the date onto every device md (a one-field change would rewrite every record and blur
+per-record git history); inferring completeness from manifest mtime (that is exactly the
+claim only the owner can make).
+
+## Drive identity for mount matching (INV5, owner ruling 2026-11-10)
+
+finddump finds an online drive by matching its `mount:` block against `lsblk`. Labels are
+reused across disks, and the FS-UUID changes on a reformat (observed 2026-11-10 on a
+reformatted media HDD: only the label match kept its sweep working). The hardware serial
+(`ID_SERIAL_SHORT`) is the durable key, but `lsblk` reports it on the DISK only, never on
+its partitions, and one disk can carry several swept partitions. **Decision:** a partition
+inherits its parent disk's serial (via `lsblk` `PKNAME`); `mount: {serial: ...}` narrows
+to that disk, then `label`/`uuid` picks the partition; serial alone suffices when the disk
+has exactly one mounted partition. **Rejected:** serial + partition number (survives a
+relabel, but breaks when the partition table is redone, and is invisible to the owner);
+serial as display metadata only (leaves the reuse/reformat failure in place).
+
+## Known gap: records removed from the manifest
+
+`convert()` writes and updates records but never deletes one, so a device or drive
+removed (or renamed) in the manifest leaves its old md behind, still searchable and
+absent from the roster. Tracked as a ROADMAP item; the fix must prune only files this
+plugin rendered (`source: inventory`), never amender sidecars' foreign content.
 
 ## Boundaries (out of scope)
 
