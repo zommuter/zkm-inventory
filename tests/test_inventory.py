@@ -212,3 +212,111 @@ def test_pipe_in_value_does_not_break_table(tmp_path: Path):
     unescaped = re.findall(r"(?<!\\)\|", purpose_line)
     assert len(unescaped) == 3, f"unescaped '|' in value broke the table row: {purpose_line!r}"
     assert "movies" in purpose_line and "tv shows" in purpose_line
+
+
+# --- id:52cf — repurposing fields, complete_as_of, unknown-key refusal ------
+# Owner ruling 2026-11-10 (project_manager id:62bb, routed:ee27).
+
+
+def _convert_manifest(tmp_path: Path, manifest: dict) -> list[Path]:
+    manifest_path = tmp_path / "manifest.yaml"
+    manifest_path.write_text(yaml.safe_dump(manifest), encoding="utf-8")
+    return inv.convert(tmp_path, {"manifest": str(manifest_path)})
+
+
+_REPURPOSE_DEVICE = {
+    "id": "pi-spare-example",
+    "kind": "raspberry-pi",
+    "model": "Raspberry Pi 3B 1GB (example)",
+    "location": "example drawer",
+    "status": "idle",
+    "condition": "untested",
+    "power": "micro-USB PSU missing",
+    "connectivity": ["wifi", "ethernet"],
+    "last_used": "2025-03-01",
+    "blockers": ["no SD card", "no PSU"],
+}
+
+
+def _row(body: str, field: str) -> str:
+    return next(line for line in body.splitlines() if line.startswith(f"| {field} |"))
+
+
+def test_device_repurposing_fields_render_as_body_rows(tmp_path: Path):
+    _convert_manifest(tmp_path, {"devices": [_REPURPOSE_DEVICE]})
+    body = frontmatter.load(tmp_path / "inventory" / "devices" / "pi-spare-example.md").content
+    assert "untested" in _row(body, "Condition")
+    assert "PSU missing" in _row(body, "Power")
+    assert "wifi, ethernet" in _row(body, "Connectivity")
+    assert "2025-03-01" in _row(body, "Last used")
+    assert "no SD card, no PSU" in _row(body, "Blockers")
+
+
+def test_yaml_date_last_used_renders_iso(tmp_path: Path):
+    # Unquoted YAML dates load as datetime.date; the row must still read ISO.
+    manifest_path = tmp_path / "manifest.yaml"
+    manifest_path.write_text(
+        "devices:\n  - id: pi-dated-example\n    last_used: 2025-03-01\n", encoding="utf-8"
+    )
+    inv.convert(tmp_path, {"manifest": str(manifest_path)})
+    body = frontmatter.load(tmp_path / "inventory" / "devices" / "pi-dated-example.md").content
+    assert "2025-03-01" in _row(body, "Last used")
+
+
+def test_invalid_condition_raises(tmp_path: Path):
+    bad = {**_REPURPOSE_DEVICE, "condition": "broken-ish"}
+    with pytest.raises(ValueError, match="condition"):
+        _convert_manifest(tmp_path, {"devices": [bad]})
+
+
+def test_unknown_device_key_raises_naming_it(tmp_path: Path):
+    typo = {"id": "pi-typo-example", "conditon": "working"}
+    with pytest.raises(ValueError, match="conditon"):
+        _convert_manifest(tmp_path, {"devices": [typo]})
+    assert not (tmp_path / "inventory" / "devices" / "pi-typo-example.md").exists()
+
+
+def test_unknown_drive_key_raises_naming_it(tmp_path: Path):
+    with pytest.raises(ValueError, match="capacity_tb"):
+        _convert_manifest(tmp_path, {"drives": [{"id": "d-example", "capacity_tb": 4}]})
+
+
+def test_unknown_top_level_key_raises(tmp_path: Path):
+    # A singular `device:` would otherwise silently drop the whole list.
+    with pytest.raises(ValueError, match="device"):
+        _convert_manifest(tmp_path, {"device": [_REPURPOSE_DEVICE]})
+
+
+def test_fixture_manifest_has_no_unknown_keys(tmp_path: Path):
+    # The published example (incl. the drive `fs` key) must stay valid.
+    _run(tmp_path)
+
+
+def test_roster_without_attestation_says_not_attested(tmp_path: Path):
+    _convert_manifest(tmp_path, {"devices": [_REPURPOSE_DEVICE]})
+    roster = frontmatter.load(tmp_path / "inventory" / "devices.md")
+    assert "complete_as_of" not in roster.metadata, "attestation must never be inferred"
+    assert "not attested" in roster.content.lower()
+    assert "pi-spare-example" in roster.content
+
+
+def test_roster_with_attestation_carries_the_owner_date(tmp_path: Path):
+    _convert_manifest(tmp_path, {"complete_as_of": "2026-11-10",
+                                 "devices": [_REPURPOSE_DEVICE]})
+    roster = frontmatter.load(tmp_path / "inventory" / "devices.md")
+    assert str(roster.metadata.get("complete_as_of")) == "2026-11-10"
+    assert "complete as of 2026-11-10" in roster.content.lower()
+    assert "not attested" not in roster.content.lower()
+
+
+def test_roster_lists_every_device_one_row_each(tmp_path: Path):
+    _run(tmp_path)
+    content = frontmatter.load(tmp_path / "inventory" / "devices.md").content
+    rows = [line for line in content.splitlines()
+            if line.startswith("| ") and not line.startswith("| Id ")]
+    assert sorted(r.split("|")[1].strip() for r in rows) == ["pi-example", "pi-idle-example"]
+
+
+def test_invalid_complete_as_of_raises(tmp_path: Path):
+    with pytest.raises(ValueError, match="complete_as_of"):
+        _convert_manifest(tmp_path, {"complete_as_of": "last week", "devices": []})

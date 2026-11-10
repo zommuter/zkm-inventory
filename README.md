@@ -33,6 +33,8 @@ an it-infra 3-2-1-backup decision, not this plugin's.
 ## Manifest
 
 ```yaml
+complete_as_of: 2026-11-10  # OWNER attestation: every device owned that day is listed.
+                            # Never inferred; omit it and the roster says "NOT attested".
 drives:
   - id: media-2
     label: "Media Archive 4TB"
@@ -49,7 +51,20 @@ devices:
     location: "living room"
     status: in-use          # in-use | idle | dust-collecting | retired
     purpose: "Kodi media player"
+    condition: working      # working | faulty | untested
+    power: "official USB-C PSU"
+    connectivity: [ethernet, wifi]
+    last_used: 2026-11-01
+    blockers: []            # e.g. [no SD card, EOL OS]
 ```
+
+Every key above is the complete allowed set (plus `fs` on drives and an
+optional per-record `date`/`added`). **Any other key is a loud error naming
+it**, so a typo such as `conditon:` fails the convert instead of silently
+dropping data. Besides one md per record, the devices lane writes a single
+`inventory/devices.md` roster: one row per device plus the `complete_as_of`
+attestation, so "not listed" can be read as "not owned" only once the owner
+has attested the list.
 
 See [`docs/cataloguing-a-drive.md`](docs/cataloguing-a-drive.md) for a
 practical walkthrough of using `inventory-finddump` (lane-c) to catalogue a

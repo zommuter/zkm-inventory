@@ -246,3 +246,17 @@ Friction: none of substance. The relative-symlink-target math needed a second lo
 sibling `.git/` at the drive root) — caught it myself when the "resolving" RED case
 unexpectedly passed on the first (miscomputed-target) attempt, before touching
 production code.
+
+## 2026-11-10 -- owner-directed session (opus)
+
+Worked id:52cf -- devices lane gained `condition` (working/faulty/untested, validated),
+`power`, `connectivity`, `last_used`, `blockers` body rows; manifest-level owner
+`complete_as_of` attestation (never inferred) rendered into a new one-list
+`inventory/devices.md` roster; unknown manifest keys (top level, drive, device) now raise
+ValueError naming the key instead of being silently dropped. Owner ruling 2026-11-10 via
+project_manager id:62bb (routed:ee27), confirmed in-session. Not a ROADMAP item: the tests
+were written in the same session as the code, so the next review should treat them as
+self-authored (rule 3b) and re-check them independently.
+refactor: `_esc_cell` now joins list values, used by connectivity/blockers and the roster.
+Friction: the venv was unsynced (no `frontmatter`); a stale ruff outside it reported 5
+pre-existing-looking errors that vanished after `uv sync --extra dev`.
