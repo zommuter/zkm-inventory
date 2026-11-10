@@ -1,7 +1,7 @@
 # Fable red-team review — zkm-inventory design+build session (2026-07-11)
 
 Fresh-eyes pass over the scope meeting (D1–D3e), the plugin repo at v0.2.0
-(`/home/tobias/src/zkm/plugins/zkm-inventory/`), the INV3 lane-c design doc, and the
+(`~/src/zkm/plugins/zkm-inventory/`), the INV3 lane-c design doc, and the
 central ledger (ids f22d, d35e, e65e, 8fb4). Read-only; all claims below verified
 against the files/commands cited. Tests: 8/8 pass (`uv run pytest`, 0.04s). Plugin
 done-gate holds (HEAD == @{u} = be3c12a).

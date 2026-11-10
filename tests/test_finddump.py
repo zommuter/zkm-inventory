@@ -476,10 +476,10 @@ def test_enumerate_mounts_real_lsblk_parsing(monkeypatch, tmp_path: Path):
     """
     sample_stdout = (
         'UUID="" LABEL="" MOUNTPOINT=""\n'
-        'UUID="B4FC7F32FC7EEE4C" LABEL="" MOUNTPOINT=""\n'
-        'UUID="E054F82054F7F6DE" LABEL="Cee" MOUNTPOINT="/run/media/tobias/Cee"\n'
-        'UUID="e84375a2-3279-4419-ae99-7053088b2f3c" LABEL="Manjaro" '
-        'MOUNTPOINT="/run/media/tobias/Manjaro"\n'
+        'UUID="BBBBBBBBBBBBBBBB" LABEL="" MOUNTPOINT=""\n'
+        'UUID="AAAAAAAAAAAAAAAA" LABEL="Cee" MOUNTPOINT="/run/media/user/Cee"\n'
+        'UUID="11111111-1111-1111-1111-111111111111" LABEL="Manjaro" '
+        'MOUNTPOINT="/run/media/user/Manjaro"\n'
     )
 
     class _FakeCompleted:
@@ -494,14 +494,14 @@ def test_enumerate_mounts_real_lsblk_parsing(monkeypatch, tmp_path: Path):
 
     mounts = fd._enumerate_mounts()
     assert (
-        "E054F82054F7F6DE",
+        "AAAAAAAAAAAAAAAA",
         "Cee",
-        Path("/run/media/tobias/Cee"),
+        Path("/run/media/user/Cee"),
     ) in mounts
     assert (
-        "e84375a2-3279-4419-ae99-7053088b2f3c",
+        "11111111-1111-1111-1111-111111111111",
         "Manjaro",
-        Path("/run/media/tobias/Manjaro"),
+        Path("/run/media/user/Manjaro"),
     ) in mounts
     # Unmounted block devices (empty MOUNTPOINT) must be omitted entirely.
     assert all(mp != Path("") for _, _, mp in mounts)

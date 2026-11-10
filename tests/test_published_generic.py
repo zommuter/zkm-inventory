@@ -29,8 +29,10 @@ _UUID = re.compile(
 )
 _NTFS_SERIAL = re.compile(r"\b[0-9A-F]{16}\b")
 
-# Lockfiles are machine-generated (hashes, registry URLs) and carry no owner data.
-_SKIP = {"uv.lock"}
+# Lockfiles are machine-generated (hashes, registry URLs) and carry no owner data. This
+# file itself is skipped too: its triangulation test below spells out made-up real-LOOKING
+# values on purpose, and the scan would otherwise flag its own examples.
+_SKIP = {"uv.lock", "tests/test_published_generic.py"}
 
 
 def _tracked_text_files() -> list[tuple[Path, str]]:

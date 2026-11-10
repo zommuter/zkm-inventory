@@ -287,7 +287,7 @@ pruning ALL of those = **1,125,925** — still >1M.
    **confirmed needed**, not hypothetical.
 2. **These are system/software drives, not the media drives find-dump targets.** find-dump's value is
    locating movies/photos; pointing it at an OS or a Windows `Program Files` tree is mostly noise.
-   → INV3b needs a **per-drive content-root(s)** config (index `home/tobias/Videos`, not all of `/usr`)
+   → INV3b needs a **per-drive content-root(s)** config (index `home/<user>/Videos`, not all of `/usr`)
    AND a heavy default **prune-set**.
 3. **Pruning helps but is insufficient alone** (home 1.9M → 1.1M) → content-roots + prune-set + annex
    escape-hatch are all warranted; none alone suffices.
