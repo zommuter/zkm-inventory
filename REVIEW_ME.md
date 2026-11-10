@@ -4,7 +4,7 @@ Max ~10 open boxes; the reviewer prunes resolved ones each review turn.
 
 ## v1 handoff (2026-07-11)
 
-- [ ] **`id` is the dedup/idempotence key (not sha256).** Records are keyed by their
+- [x] **`id` is the dedup/idempotence key (not sha256).** Records are keyed by their
   stable `id` field; there is one manifest, not per-item source files, so re-running
   rewrites-in-place and is a git no-op when unchanged. Confirm `id` is the right key (vs.
   a content hash). Encoded in: `test_rerun_is_idempotent`. (handoff 2026-07-11)
@@ -15,6 +15,8 @@ Max ~10 open boxes; the reviewer prunes resolved ones each review turn.
   `zkm search` results jump between file names. `id` is identity, the hash is version.
   The real weakness of `id`-keying is renames/removals leaving stale files, which INV6
   (id:d0a5) now covers. Still open: the owner decides.
+
+  Owner 2026-11-10 (relay human batches 2-3): manifest `id` stays the record key and file name for devices; for DRIVES the checked key becomes hardware serial + partition number (plus fs_uuid for reformat detection), with a readable <label>-<serial4> id as file name. Filed as [HARD] INV9 id:1441.
 
 ## Handoff 2026-11-10
 
