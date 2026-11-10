@@ -77,15 +77,22 @@ inventory-finddump:
         - Documents
         - Pictures
 
-    # A second drive, same physical spindle marker in the id suffix
-    # (illustrative — these two ids sharing "a1b2" would mean "same disk").
+    # A second partition on the SAME disk, pinned by hardware serial. Labels get
+    # reused across drives and a reformat changes the UUID; the disk serial
+    # (`lsblk -o NAME,SERIAL`, shown on the disk row) survives both. `serial:`
+    # narrows to that disk, `label:`/`uuid:` picks the partition on it.
     - id: media2-a1b2
       mount:
+        serial: "<DISK-SERIAL>"  # placeholder — real serial stays local-only
         label: "MEDIA2"
       content_roots:
         - Movies
         - home/<user>/Videos
 ```
+
+Each sweep's summary (`inventory/find-dump/<id>.md`) records `disk_serial` for
+mount-detected drives, so two partitions with the same value share one physical
+disk: one failure domain, whatever their ids say.
 
 `inventory-finddump` scopes the sweep to `content_roots` and then hands the
 walk to `fd` (preferred backend; falls back to a pure-Python `pathspec` walk
