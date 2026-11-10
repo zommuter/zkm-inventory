@@ -44,7 +44,7 @@ Max ~10 open boxes; the reviewer prunes resolved ones each review turn.
 
   Owner 2026-11-10 (relay human batch 1): make it loud. Specced as [ROUTINE] INV8 id:0a98 (tests/test_finddump_lsblk_loud.py, RED).
 
-- [ ] **INV7 scan matches shapes, not values, and cannot see its own file.**
+- [x] **INV7 scan matches shapes, not values, and cannot see its own file.**
   `tests/test_published_generic.py` flags home/media-mount paths under a real-looking user
   name and UUID/16-hex serials with more than two distinct hex digits; it cannot recognise
   arbitrary disk serials (no fixed shape), and never spells out the real values (that would
@@ -53,7 +53,9 @@ Max ~10 open boxes; the reviewer prunes resolved ones each review turn.
   invisible to the guard. Acceptable as the guard (disk serials and that one file left to
   review), or narrow the self-skip to the triangulation lines?
 
-- [ ] **id:003c (INV3-PILOT) was closed without an owner-accept marker.** A human-run,
+  Owner 2026-11-10 (relay human batch 2): narrow the skip. Done: the guard now scans its own file except the triangulation test body (tests/test_published_generic.py _self_exempt_lines), with two tests pinning that the exemption stays that narrow. Disk serials remain review-only (no fixed shape).
+
+- [x] **id:003c (INV3-PILOT) was closed without an owner-accept marker.** A human-run,
   user-visible item needs an explicit dated `@owner-accepted:` line to count into the
   user-observable-close set that feeds the version bump (review.md 5c); the close carries
   only the prose "owner-closed". The deliverable IS present and verifiable (two pilot
@@ -62,5 +64,7 @@ Max ~10 open boxes; the reviewer prunes resolved ones each review turn.
   unchanged), so the review did not reopen it. It is excluded from this integrate's
   user-observable-close set. Confirm the close, or add the marker. (review
   relay-20261110-202900-570)
+
+  Owner 2026-11-10 (relay human batch 2): confirmed the close and instructed the marker; @owner-accepted:2026-11-10 added to the item in ROADMAP.archive.md.
 
 - [ ] **115 persisting relay-doctor findings present (not re-boxed); revisit when convenient** -- updated 2026-11-10; ids: id:ddb9, id:6ed1, id:2147, id:a760, id:f14e, id:2b4b, id:ba95, id:8a76, id:73c9, id:4224, id:2799, id:2e1f, id:82d7, id:8699, id:a26b, id:f1a4, id:d67f, id:9225, id:24be, id:a742, id:6065, id:db1d, id:3c5a, id:9298, id:adfe, id:dd62, id:62bb, id:1d70, id:5acf, id:ecce, id:9efd, id:678e; 81 without an id; see them in full: `~/.claude/skills/relay/scripts/relay-doctor.sh "$(pwd)"` (review.md 4b, owner-ratified 2026-10-08, decision 33) <!-- relay-doctor-persisting -->

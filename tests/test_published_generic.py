@@ -29,10 +29,25 @@ _UUID = re.compile(
 )
 _NTFS_SERIAL = re.compile(r"\b[0-9A-F]{16}\b")
 
-# Lockfiles are machine-generated (hashes, registry URLs) and carry no owner data. This
-# file itself is skipped too: its triangulation test below spells out made-up real-LOOKING
-# values on purpose, and the scan would otherwise flag its own examples.
-_SKIP = {"uv.lock", "tests/test_published_generic.py"}
+# Lockfiles are machine-generated (hashes, registry URLs) and carry no owner data.
+_SKIP = {"uv.lock"}
+
+# This file IS scanned, except the body of its own triangulation test, which spells out
+# made-up real-LOOKING values on purpose (owner ruling 2026-11-10: narrow the old
+# whole-file self-skip, so a real value pasted anywhere else here is still caught).
+_SELF = "tests/test_published_generic.py"
+_SELF_EXEMPT_FUNC = "test_shape_checks_flag_real_looking_values_and_spare_placeholders"
+
+
+def _self_exempt_lines() -> range:
+    """1-based line range of the triangulation test's definition in this file."""
+    import ast
+
+    tree = ast.parse(Path(__file__).read_text(encoding="utf-8"))
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == _SELF_EXEMPT_FUNC:
+            return range(node.lineno, (node.end_lineno or node.lineno) + 1)
+    raise AssertionError(f"{_SELF_EXEMPT_FUNC} not found; the self-exemption would be void")
 
 
 def _tracked_text_files() -> list[tuple[Path, str]]:
@@ -57,20 +72,45 @@ def _is_placeholder(token: str) -> bool:
     return len(set(token.replace("-", "").lower())) <= 2
 
 
+def _line_hits(line: str) -> list[str]:
+    """Kinds of real-looking identifier on one line (empty list = clean)."""
+    kinds = []
+    if _USER_PATH.search(line):
+        kinds.append("user path")
+    kinds += ["uuid" for m in _UUID.finditer(line) if not _is_placeholder(m.group(0))]
+    kinds += [
+        "16-hex serial" for m in _NTFS_SERIAL.finditer(line) if not _is_placeholder(m.group(0))
+    ]
+    return kinds
+
+
 def _findings() -> list[str]:
     hits = []
+    exempt = _self_exempt_lines()
     for path, text in _tracked_text_files():
         rel = path.relative_to(REPO)
         for lineno, line in enumerate(text.splitlines(), 1):
-            if _USER_PATH.search(line):
-                hits.append(f"{rel}:{lineno}: user path")
-            for m in _UUID.finditer(line):
-                if not _is_placeholder(m.group(0)):
-                    hits.append(f"{rel}:{lineno}: uuid")
-            for m in _NTFS_SERIAL.finditer(line):
-                if not _is_placeholder(m.group(0)):
-                    hits.append(f"{rel}:{lineno}: 16-hex serial")
+            if str(rel) == _SELF and lineno in exempt:
+                continue
+            hits += [f"{rel}:{lineno}: {kind}" for kind in _line_hits(line)]
     return hits
+
+
+def test_self_exemption_covers_only_the_triangulation_test():
+    # roadmap:a124 follow-up (owner 2026-11-10): the guard's own file is scanned except one
+    # function. The exempt range must be that function and nothing more.
+    exempt = _self_exempt_lines()
+    source = Path(__file__).read_text(encoding="utf-8").splitlines()
+    assert source[exempt.start - 1].startswith(f"def {_SELF_EXEMPT_FUNC}(")
+    assert len(exempt) < len(source) // 4, "exemption grew beyond the triangulation test"
+    assert _SELF not in _SKIP
+
+
+def test_a_real_looking_value_outside_the_exemption_would_be_caught():
+    # Built at runtime so this line itself never contains the literal it checks.
+    fake_uuid = "-".join(["3f2a9c1e", "7b4d", "4e8a", "9c2f", "1a2b3c4d5e6f"])
+    assert _line_hits(f'uuid: "{fake_uuid}"') == ["uuid"]
+    assert _line_hits("path " + "/home/" + "alice" + "/notes") == ["user path"]
 
 
 def test_no_tracked_file_carries_real_user_paths_or_uuids():

@@ -117,7 +117,7 @@
   flip-to-annex threshold + prune globs, it does not gate.
 
 ## Pilot (CALIBRATES the annex threshold — does NOT gate INV3b)
-- [x] **INV3-PILOT — measure real HDD contents to calibrate the annex flip-threshold + prune globs.** <!-- id:003c -->
+- [x] **INV3-PILOT — measure real HDD contents to calibrate the annex flip-threshold + prune globs.** @owner-accepted:2026-11-10 <!-- id:003c -->
   Mount ≥1 real external drive and measure file count + total listing size
   (`scripts/pilot-drive-count.sh <mount>`) to tune where T1-git-shards flip to
   annex-raw+thin-summary (default threshold ~1M files / ~100 MB) and which prune/exclude globs
