@@ -280,3 +280,7 @@ owner's user name in a public test and two docs (INV7), and a TODO line of my ow
 earlier the same day carrying partial disk serials, removed in C2 but still in local
 commit 7b7f1db. Two of my md-merge calls went wrong mid-handoff (an unminted id typed by
 hand; a section briefly overwritten with a placeholder) and were corrected before commit.
+
+## 2026-11-10 20:01 -- integrate (claude-opus-5-5)
+
+handoff C1-C5: docs, items-only TODO, INV5/INV6/INV7 specs, INV5 built; review window left open (self-authored code since a66ecdc)
