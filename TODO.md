@@ -18,6 +18,8 @@ this file carries summary lines only. See core `id:e65e` for the umbrella item.
   default) + prune globs; annex escape-hatch evidence-gated (still open, see INV3-PILOT). See
   ROADMAP.
 - [ ] INV3-PILOT — measure a real HDD's file count/size (scripts/pilot-drive-count.sh) to CALIBRATE the annex flip-threshold + prune globs. HUMAN-run. Does NOT gate INV3b.
+- [x] INV4 (id:52cf) — devices schema for project_manager's repurposing decision (its id:62bb): `condition`/`power`/`connectivity`/`last_used`/`blockers` rows, owner `complete_as_of` attestation + one-list `inventory/devices.md` roster, unknown manifest keys are a loud error (owner rulings 2026-11-10). Commit a66ecdc. <!-- routed:ee27 -->
+- [ ] INV4-WALK (id:4654) — HUMAN: walk every RPi + IoT device, write the store manifest (`plugins.inventory.manifest` in `zkm-config.yaml`), set `complete_as_of`, run `zkm convert inventory`; then report to project_manager via inbox citing id:62bb.
 
 ## Deferred
 
