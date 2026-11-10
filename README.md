@@ -66,6 +66,12 @@ dropping data. Besides one md per record, the devices lane writes a single
 attestation, so "not listed" can be read as "not owned" only once the owner
 has attested the list.
 
+The manifest is authoritative in both directions: **drop a record (or rename its
+`id`) and the next `zkm convert inventory` deletes the md it rendered**, together
+with that md's sidecars, so a sold drive stops turning up in `zkm search`. Only
+files this plugin wrote (frontmatter `source: inventory`) are ever removed, so a
+hand-written note sitting in `inventory/devices/` is safe.
+
 See [`docs/cataloguing-a-drive.md`](docs/cataloguing-a-drive.md) for a
 practical walkthrough of using `inventory-finddump` (lane-c) to catalogue a
 drive's content into searchable per-drive markdown.

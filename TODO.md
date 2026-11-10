@@ -7,8 +7,8 @@
 - [x] [ROUTINE] INV7 scrub real identifiers from tracked tests/docs (public repo) <!-- id:a124 -->
 - [x] [INPUT - decision] INV7b history rewrite: no (owner 2026-11-10), scrub current state only <!-- id:d142 -->
 
-- [ ] [HARD] relay review of the 2026-11-10 self-authored work from d33d1e6 (review-window.sh resolves to the integrate ckpt, see routed:5b36) (filed unattended by /wrapup relay-20261110-201511-31289) <!-- id:e16e -->
-- [ ] [HARD] reviewer: minor bump to v0.8.0 at the next integrate (INV5 serial matching is user-visible) (filed unattended by /wrapup relay-20261110-201511-31289) <!-- id:5225 -->
+- [x] [HARD] relay review of the 2026-11-10 self-authored work from d33d1e6 -- DONE 2026-11-10: review relay-20261110-202900-570 widened its audit window to d33d1e6..HEAD and covered id:52cf/id:4654 (INV4), id:3423 (INV5) and id:003c (pilot) <!-- id:e16e -->
+- [x] [HARD] reviewer: minor bump to v0.8.0 at the next integrate (INV5 serial matching is user-visible) -- DONE: tag v0.8.0 and pyproject 0.8.0 landed 2026-11-10 <!-- id:5225 -->
 ## Done
 
 - [x] INV1 drives lane, shipped v0.2.0 <!-- id:82a2 -->

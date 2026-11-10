@@ -305,3 +305,30 @@ Friction: `uv run` fails in a worktree outside a zkm checkout (editable ../../ p
 ## 2026-11-10 20:31 -- executor (sonnet, relay-loop)
 
 INV6 d0a5: convert() prunes rendered records and sidecars removed from the manifest [id:d0a5]
+
+## 2026-11-10 -- reviewer (claude-opus-5, relay-loop)
+
+Audit window WIDENED from the digest's `19e30dd..HEAD` to `d33d1e6..HEAD`, which is what
+TODO id:e16e asked for: the 2026-11-10 session authored the RED specs, executed them and
+integrated itself, so `review-window.sh` resolved to that session's own integrate
+checkpoint and INV4 (id:52cf, id:4654), the pilot (id:003c) and INV5 (id:3423) would never
+have been audited by anyone. Verified green and genuine: id:d0a5 (tests authored RED at
+`fa9b5d4`, byte-identical at HEAD, implementation commit `bd99e84` touched no test),
+id:a124 (the lsblk transcript scrub changed INPUT values in transcript and asserts
+together; assertion logic untouched, the 2b.1 negative control), id:3423 (specs RED at
+`fa9b5d4`, impl `b84d7e6` touched no test; checked for over-reach against the ratified
+owner ruling in ARCHITECTURE.md Drive identity and found faithful, not a superset), and
+id:52cf/id:4654 (`a66ecdc` adds tests, deletes none). Tiers: pytest 67 passed, 1 skipped
+(`fd`/`fdfind` not installed, the pathspec fallback is covered separately) and `ruff check
+convert.py finddump.py tests/` clean, both run from the main checkout's plugin `.venv`
+because `uv run` cannot resolve the `../../` zkm path dep in a relay worktree.
+SKIPPED-TIER: bdd -- `features/inventory.feature` has no runner in this repo (no
+behave/pytest-bdd dependency, no step module); its non-`@manual` scenarios are covered by
+`tests/test_inventory.py`, and the `@manual` CLI scenario stays a human check. One gaming
+flag raised and judged benign: `ADDED_SKIP:tests/test_published_generic.py:40`, a
+`pytest.skip("git not available")` toolchain guard in a brand-new file, and git is present
+so the test really ran. Spec drift fixed: ARCHITECTURE.md still carried "Known gap:
+records removed from the manifest" after INV6 shipped the prune, and README documented no
+deletion behaviour at all though it is user-observable. Closed TODO-only id:e16e (this
+audit) and id:5225 (v0.8.0 is tagged and in pyproject). ROADMAP has 0 open items;
+routine_open = 0.

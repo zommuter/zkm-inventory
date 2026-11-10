@@ -38,8 +38,23 @@ Max ~10 open boxes; the reviewer prunes resolved ones each review turn.
   failing command look like success" rule. Keep (graceful degrade, design §Q3), or make
   enumeration failure loud? Not encoded in a test yet.
 
-- [ ] **INV7 scan matches shapes, not values.** `tests/test_published_generic.py` flags
-  home/media-mount paths under a real-looking user name and UUID/16-hex serials with more
-  than two distinct hex digits; it cannot recognise arbitrary disk serials (no fixed
-  shape), and never spells out the real values (that would republish them). Acceptable as
-  the guard, with disk serials left to review?
+- [ ] **INV7 scan matches shapes, not values, and cannot see its own file.**
+  `tests/test_published_generic.py` flags home/media-mount paths under a real-looking user
+  name and UUID/16-hex serials with more than two distinct hex digits; it cannot recognise
+  arbitrary disk serials (no fixed shape), and never spells out the real values (that would
+  republish them). It also skips ITSELF, because its triangulation test spells out
+  real-LOOKING examples on purpose: a real identifier pasted into that one file would be
+  invisible to the guard. Acceptable as the guard (disk serials and that one file left to
+  review), or narrow the self-skip to the triangulation lines?
+
+- [ ] **id:003c (INV3-PILOT) was closed without an owner-accept marker.** A human-run,
+  user-visible item needs an explicit dated `@owner-accepted:` line to count into the
+  user-observable-close set that feeds the version bump (review.md 5c); the close carries
+  only the prose "owner-closed". The deliverable IS present and verifiable (two pilot
+  measurements recorded in `docs/inv3-lane-c-design.md`: 2026-07-11 SSD system partitions
+  1.6M to 3.0M files, 2026-11-10 media HDD content roots 54,356 files / ~6.4 MB, threshold
+  unchanged), so the review did not reopen it. It is excluded from this integrate's
+  user-observable-close set. Confirm the close, or add the marker. (review
+  relay-20261110-202900-570)
+
+- [ ] **115 persisting relay-doctor findings present (not re-boxed); revisit when convenient** -- updated 2026-11-10; ids: id:ddb9, id:6ed1, id:2147, id:a760, id:f14e, id:2b4b, id:ba95, id:8a76, id:73c9, id:4224, id:2799, id:2e1f, id:82d7, id:8699, id:a26b, id:f1a4, id:d67f, id:9225, id:24be, id:a742, id:6065, id:db1d, id:3c5a, id:9298, id:adfe, id:dd62, id:62bb, id:1d70, id:5acf, id:ecce, id:9efd, id:678e; 81 without an id; see them in full: `~/.claude/skills/relay/scripts/relay-doctor.sh "$(pwd)"` (review.md 4b, owner-ratified 2026-10-08, decision 33) <!-- relay-doctor-persisting -->
