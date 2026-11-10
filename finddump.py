@@ -99,12 +99,14 @@ def convert(store_path: Path, config: dict, *, progress=None) -> list[Path]:
     total = len(drives)
     seen_ids: set[str] = set()
     mounts: list[tuple[str | None, str | None, Path]] | None = None
+    serials: dict[Path, str] = {}
 
     for idx, drive in enumerate(drives):
         drive_id = _validate_id(drive, "drive", seen_ids)
         if progress:
             progress(idx, total, drive_id)
 
+        disk_serial: str | None = None
         roots = _resolve_drive_roots(drive)
         if roots is None:
             # `mount:`-configured drive with no currently-matching mounted
@@ -113,9 +115,11 @@ def convert(store_path: Path, config: dict, *, progress=None) -> list[Path]:
             # Resolve the online set lazily and only once per convert() call.
             if mounts is None:
                 mounts = _enumerate_mounts()
-            mountpoint = _resolve_mount(drive, mounts)
+                serials = _enumerate_serials()
+            mountpoint = _resolve_mount(drive, mounts, serials)
             if mountpoint is None:
                 continue
+            disk_serial = serials.get(mountpoint)
             content_roots = drive.get("content_roots")
             if content_roots:
                 roots = [mountpoint / cr for cr in content_roots]
@@ -142,7 +146,12 @@ def convert(store_path: Path, config: dict, *, progress=None) -> list[Path]:
         created.extend(shard_changed)
 
         summary_path = _write_summary(
-            store_path, drive_id, entries, shard_names, shards_changed=bool(shard_changed)
+            store_path,
+            drive_id,
+            entries,
+            shard_names,
+            shards_changed=bool(shard_changed),
+            disk_serial=disk_serial,
         )
         if summary_path is not None:
             created.append(summary_path)
@@ -183,32 +192,8 @@ def _enumerate_mounts() -> list[tuple[str | None, str | None, Path]]:
     with fixture triples) so the suite never shells out to real `lsblk` or
     touches real mounts.
     """
-    lsblk_bin = shutil.which("lsblk")
-    if not lsblk_bin:
-        return []
-    try:
-        proc = subprocess.run(
-            [lsblk_bin, "-o", "UUID,LABEL,MOUNTPOINT", "-P", "-n"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-    except (OSError, subprocess.CalledProcessError):
-        return []
-
     results: list[tuple[str | None, str | None, Path]] = []
-    for line in proc.stdout.splitlines():
-        if not line.strip():
-            continue
-        kv: dict[str, str] = {}
-        try:
-            fields = shlex.split(line)
-        except ValueError:
-            continue
-        for field in fields:
-            key, sep, value = field.partition("=")
-            if sep:
-                kv[key] = value
+    for kv in _lsblk_rows("UUID,LABEL,MOUNTPOINT"):
         mountpoint = kv.get("MOUNTPOINT") or ""
         if not mountpoint:
             continue
@@ -216,22 +201,114 @@ def _enumerate_mounts() -> list[tuple[str | None, str | None, Path]]:
     return results
 
 
+def _enumerate_serials() -> dict[Path, str]:
+    """Read-only map of mountpoint -> hardware serial of the DISK it lives on (INV5).
+
+    `lsblk` reports ``SERIAL`` on the disk row only; a partition (or a
+    dm-crypt/LVM layer on top of one) carries an empty serial and names its
+    parent in ``PKNAME``. So each mounted row walks up its ``PKNAME`` chain to
+    the first ancestor with a serial. A whole-disk filesystem uses its own.
+    Mounts with no serial anywhere up the chain are omitted. Same graceful
+    degrade as `_enumerate_mounts`: any lsblk failure yields ``{}``.
+    """
+    rows = _lsblk_rows("NAME,PKNAME,SERIAL,MOUNTPOINT")
+    parent = {r.get("NAME", ""): r.get("PKNAME", "") for r in rows}
+    own_serial = {r.get("NAME", ""): r.get("SERIAL", "") for r in rows}
+
+    def disk_serial(name: str) -> str:
+        seen: set[str] = set()
+        while name and name not in seen:
+            seen.add(name)
+            if own_serial.get(name):
+                return own_serial[name]
+            name = parent.get(name, "")
+        return ""
+
+    result: dict[Path, str] = {}
+    for row in rows:
+        mountpoint = row.get("MOUNTPOINT") or ""
+        serial = disk_serial(row.get("NAME", "")) if mountpoint else ""
+        if serial:
+            result[Path(mountpoint)] = serial
+    return result
+
+
+def _lsblk_rows(columns: str) -> list[dict[str, str]]:
+    """Run ``lsblk -o <columns> -P -n`` read-only; return one key=value dict per row.
+
+    Never raises: a missing `lsblk`, a non-zero exit or an unparsable line yields
+    fewer (or no) rows, which callers treat as "drive offline" (design §Q3).
+    """
+    lsblk_bin = shutil.which("lsblk")
+    if not lsblk_bin:
+        return []
+    try:
+        proc = subprocess.run(
+            [lsblk_bin, "-o", columns, "-P", "-n"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return []
+
+    rows: list[dict[str, str]] = []
+    for line in proc.stdout.splitlines():
+        if not line.strip():
+            continue
+        try:
+            fields = shlex.split(line)
+        except ValueError:
+            continue
+        kv: dict[str, str] = {}
+        for field in fields:
+            key, sep, value = field.partition("=")
+            if sep:
+                kv[key] = value
+        rows.append(kv)
+    return rows
+
+
 def _resolve_mount(
-    drive: dict, mounts: list[tuple[str | None, str | None, Path]]
+    drive: dict,
+    mounts: list[tuple[str | None, str | None, Path]],
+    serials: dict[Path, str] | None = None,
 ) -> Path | None:
     """Match *drive*'s `mount:` block against the enumerated online set.
 
-    Matches by ``uuid`` (exact) OR ``label`` (case-insensitive) — either
-    identifier suffices. Returns the matching mountpoint, or ``None`` when
-    no currently-mounted filesystem matches (drive offline) — the caller
-    treats that as "skip gracefully", never as an error.
+    Without ``serial``: matches by ``uuid`` (exact) OR ``label``
+    (case-insensitive), either identifier suffices.
+
+    With ``serial`` (INV5, owner ruling 2026-11-10): only partitions on the
+    disk with that hardware serial are candidates; ``uuid``/``label`` then pick
+    one the same way. With neither, a single candidate is used and two or more
+    raise ``ValueError``. Labels are reused across disks and UUIDs change on a
+    reformat; the serial is what survives both.
+
+    Returns the matching mountpoint, or ``None`` when nothing currently mounted
+    matches (drive offline), which the caller treats as "skip gracefully".
     """
     mount_cfg = drive.get("mount") or {}
     want_uuid = mount_cfg.get("uuid")
     want_label = mount_cfg.get("label")
-    if not want_uuid and not want_label:
+    want_serial = mount_cfg.get("serial")
+
+    candidates = mounts
+    if want_serial:
+        serials = serials or {}
+        candidates = [m for m in mounts if serials.get(m[2]) == str(want_serial)]
+        if not want_uuid and not want_label:
+            if len(candidates) > 1:
+                raise ValueError(
+                    f"inventory-finddump: drive {drive.get('id')!r} serial {want_serial!r} "
+                    f"matches {len(candidates)} mounted partitions; add `label:` or `uuid:` "
+                    "to its `mount:` block to pick one"
+                )
+            return candidates[0][2] if candidates else None
+    elif not want_uuid and not want_label:
         return None
-    for uuid, label, mountpoint in mounts:
+
+    for uuid, label, mountpoint in candidates:
         if want_uuid and uuid and uuid == want_uuid:
             return mountpoint
         if want_label and label and label.lower() == str(want_label).lower():
@@ -437,6 +514,7 @@ def _write_summary(
     shard_names: list[str],
     *,
     shards_changed: bool,
+    disk_serial: str | None = None,
 ) -> Path | None:
     """Write the per-drive summary md; return its path iff it changed.
 
@@ -464,6 +542,10 @@ def _write_summary(
         "file_count": file_count,
         "total_bytes": total_bytes,
     }
+    if disk_serial:
+        # Parent-disk hardware serial (INV5): partitions sharing it share a spindle,
+        # i.e. one failure domain.
+        candidate_meta["disk_serial"] = disk_serial
 
     new_ts = datetime.now().replace(microsecond=0).isoformat()
 

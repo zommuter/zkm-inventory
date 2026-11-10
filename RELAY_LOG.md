@@ -260,3 +260,23 @@ self-authored (rule 3b) and re-check them independently.
 refactor: `_esc_cell` now joins list values, used by connectivity/blockers and the roster.
 Friction: the venv was unsynced (no `frontmatter`); a stale ruff outside it reported 5
 pre-existing-looking errors that vanished after `uv sync --extra dev`.
+
+## 2026-11-10 -- handoff (opus)
+
+Onboarded into relay.toml (owner). C1: CLAUDE.md rewritten (both plugins, roster, worktree
+test recipe, contract pointer v6 -> v28), ARCHITECTURE.md gains manifest strictness, roster
+attestation, the INV5 drive-identity ruling and the stale-record gap. C2: TODO.md to the
+items-only grammar; ROADMAP shared rules fixed (executors never bump); new items INV5
+id:3423 [HARD], INV6 id:d0a5 [ROUTINE], INV7 id:a124 [ROUTINE], INV7b id:d142 [INPUT -
+decision]. C3: RED specs for all three; INV5 cases use a decoy on a second disk so
+label/uuid matching alone cannot pass them. C4: no BDD (CLI-only); REVIEW_ME sectioned, 2
+owner-confirmed boxes ticked, 4 new judgment boxes. C5: INV5 built (serial via lsblk PKNAME
+chain, `disk_serial` in the summary), verified read-only against the live host.
+Worked id:3423 -- serial-based drive identity for inventory-finddump.
+refactor: lsblk `-P` parsing shared by `_enumerate_mounts` and `_enumerate_serials`.
+Friction: `uv run` cannot resolve the `../../` zkm path dep from a relay worktree (ran the
+main checkout's venv instead, now documented). Found real UUIDs, an NTFS serial and the
+owner's user name in a public test and two docs (INV7), and a TODO line of my own from
+earlier the same day carrying partial disk serials, removed in C2 but still in local
+commit 7b7f1db. Two of my md-merge calls went wrong mid-handoff (an unminted id typed by
+hand; a section briefly overwritten with a placeholder) and were corrected before commit.
