@@ -301,3 +301,7 @@ Friction: the self-flagging spec bug above.
 Worked id:d0a5 -- convert() now prunes rendered records (source: inventory) whose id left the manifest, with their `<md>.*` sidecars, and the roster when no devices and no attestation; deleted paths are returned.
 refactor: none needed -- two small helpers added, nothing existing restructured.
 Friction: `uv run` fails in a worktree outside a zkm checkout (editable ../../ path), so I ran pytest and ruff from the main checkout's plugin .venv; I also applied the convert.py edit via a python script rather than Edit (rule slip, content verified by the green suite).
+
+## 2026-11-10 20:31 -- executor (sonnet, relay-loop)
+
+INV6 d0a5: convert() prunes rendered records and sidecars removed from the manifest [id:d0a5]
