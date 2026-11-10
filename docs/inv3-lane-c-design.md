@@ -299,6 +299,34 @@ pruning ALL of those = **1,125,925** — still >1M.
 Net: **INV3b default = content-roots (opt-in per drive) + prune-set, T1-git shards; auto-fall-back to
 annex-raw+thin-summary when a swept root still exceeds ~1M files / ~100 MB.**
 
+## Pilot calibration (2026-11-10 — 16 TB external media HDD, btrfs)
+
+Second real measurement, and the first on the drive type find-dump actually targets (bulk media
+archive). Run live with `scripts/pilot-drive-count.sh` over the drive's configured `content_roots`
+only (the error-surfacing version: exit 0, no INCOMPLETE, so these are full counts, not lower bounds):
+
+| Content root | Files | Est. listing |
+|---|---|---|
+| `Movies` | 3,255 | 315 KB |
+| `Series` | 9,181 | 1.2 MB |
+| `Documents` | 41,692 | 4.9 MB |
+| a dated camera-dump root | 228 | 13 KB |
+| **swept total** | **54,356** | **~6.4 MB** |
+
+For scale only (not a plugin measurement): an out-of-band listing of the same drive from July held
+~7.4M files in total, ~98% of them in two trees that are NOT content roots (a btrfs rescue dump and
+a parked OS-plus-data backup).
+
+**Calibration conclusions:**
+1. **On a media drive, content-roots alone keep the swept set ~20x under the ~1M threshold.** T1 git
+   shards are comfortably right; the annex escape-hatch is not triggered and no extra prune globs
+   are needed for these roots.
+2. **The whole drive would have crossed it many times over**, so content-roots is the load-bearing
+   control here, as conclusion 2 of the 2026-07-11 pilot predicted. The ~1M / ~100 MB threshold
+   stays as is: neither pilot gives a reason to move it.
+3. Media-manager sidecar dirs (`.deletedByTMM`, `.actors`, `.moviesets`) show up at a few hundred
+   files each. Too few to need pruning; noted in case a larger library makes them matter.
+
 ## Prior art (surveyed 2026-07-11) — do NOT reinvent
 
 The observed prune-set above is *noise data*, not a mechanism. Two distinct solved problems, each with a
