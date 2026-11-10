@@ -80,12 +80,19 @@ has exactly one mounted partition. **Rejected:** serial + partition number (surv
 relabel, but breaks when the partition table is redone, and is invisible to the owner);
 serial as display metadata only (leaves the reuse/reformat failure in place).
 
-## Known gap: records removed from the manifest
+## Records removed from the manifest (INV6, shipped v0.8.0)
 
-`convert()` writes and updates records but never deletes one, so a device or drive
-removed (or renamed) in the manifest leaves its old md behind, still searchable and
-absent from the roster. Tracked as a ROADMAP item; the fix must prune only files this
-plugin rendered (`source: inventory`), never amender sidecars' foreign content.
+`convert()` prunes, so a device or drive removed (or renamed) in the manifest no longer
+leaves a stale md behind to be searched. After rendering, every
+`inventory/{drives,devices}/<id>.md` whose id is absent from the manifest is deleted
+together with its `<md>.*` sidecars, and the deleted paths are returned so core's scoped
+`git add` stages the removal. The prune is confined by ownership and by directory: only a
+file whose frontmatter `source` is `inventory` is ever touched (a hand-written note or an
+unparseable file in the lane dir is left alone), and only the two lane dirs are swept,
+never `inventory/find-dump/` (a different plugin's output). `inventory/devices.md` goes
+too when the manifest has neither devices nor a `complete_as_of` attestation. A deleted
+record's amender write-back goes with it: a sidecar for a non-existent md has no reader
+(the alternative, orphan sidecars left for core `zkm gc`, was rejected).
 
 ## Boundaries (out of scope)
 
