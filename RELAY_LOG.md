@@ -332,3 +332,7 @@ records removed from the manifest" after INV6 shipped the prune, and README docu
 deletion behaviour at all though it is user-observable. Closed TODO-only id:e16e (this
 audit) and id:5225 (v0.8.0 is tagged and in pyproject). ROADMAP has 0 open items;
 routine_open = 0.
+
+## 2026-11-10 20:43 -- reviewer (claude-opus-5, fable-standin, relay-loop)
+
+review: widened window to d33d1e6..HEAD (discharges id:e16e), verified d0a5/a124/3423/52cf/4654 genuine, suite 67 passed + ruff clean, bdd tier skipped (no runner), fixed stale ARCHITECTURE known-gap + README prune docs, drained TODO (e16e, 5225) [id:e16e,5225,d0a5,a124,3423,52cf,4654]
