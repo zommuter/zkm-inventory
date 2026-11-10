@@ -165,7 +165,7 @@ Shared rules for every item below:
   - **Context**: `finddump.py` `_enumerate_mounts`/`_resolve_mount`/summary render;
     `plugin.yaml` inventory-finddump config description. Origin: core id:3423, it-infra id:a28d.
 
-- [ ] [ROUTINE] **INV6 — prune rendered records removed from the manifest** <!-- id:d0a5 -->
+- [x] [ROUTINE] **INV6 — prune rendered records removed from the manifest** <!-- id:d0a5 -->
   - **Acceptance**: after rendering, `convert()` deletes every `inventory/{drives,devices}/<id>.md`
     whose `id` is not in the manifest AND whose frontmatter `source` is `inventory`, plus that
     md's `<md>.*` sidecar files (`.amendments.json`, its `.lock`). Files without
