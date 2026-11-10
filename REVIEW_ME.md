@@ -35,12 +35,14 @@ Max ~10 open boxes; the reviewer prunes resolved ones each review turn.
 
   Owner 2026-11-10 (relay human batch 1): raise and abort the run, consistent with the strict-manifest ruling.
 
-- [ ] **A failing `lsblk` reads as "every drive offline", silently.** Pre-existing design
+- [x] **A failing `lsblk` reads as "every drive offline", silently.** Pre-existing design
   (`_enumerate_mounts` returns `[]` on any failure; INV5's `_enumerate_serials` is specced
   the same way, returning `{}`). A missing or broken `lsblk` therefore produces a sweep
   that changes nothing and says nothing, which conflicts with the owner's "never make a
   failing command look like success" rule. Keep (graceful degrade, design §Q3), or make
   enumeration failure loud? Not encoded in a test yet.
+
+  Owner 2026-11-10 (relay human batch 1): make it loud. Specced as [ROUTINE] INV8 id:0a98 (tests/test_finddump_lsblk_loud.py, RED).
 
 - [ ] **INV7 scan matches shapes, not values, and cannot see its own file.**
   `tests/test_published_generic.py` flags home/media-mount paths under a real-looking user
