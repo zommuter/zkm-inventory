@@ -43,3 +43,5 @@ Max ~10 open boxes; the reviewer prunes resolved ones each review turn.
   than two distinct hex digits; it cannot recognise arbitrary disk serials (no fixed
   shape), and never spells out the real values (that would republish them). Acceptable as
   the guard, with disk serials left to review?
+
+- [ ] **115 persisting relay-doctor findings present (not re-boxed); revisit when convenient** -- updated 2026-11-10; ids: id:ddb9, id:6ed1, id:2147, id:a760, id:f14e, id:2b4b, id:ba95, id:8a76, id:73c9, id:4224, id:2799, id:2e1f, id:82d7, id:8699, id:a26b, id:f1a4, id:d67f, id:9225, id:24be, id:a742, id:6065, id:db1d, id:3c5a, id:9298, id:adfe, id:dd62, id:62bb, id:1d70, id:5acf, id:ecce, id:9efd, id:678e; 81 without an id; see them in full: `~/.claude/skills/relay/scripts/relay-doctor.sh "$(pwd)"` (review.md 4b, owner-ratified 2026-10-08, decision 33) <!-- relay-doctor-persisting -->
