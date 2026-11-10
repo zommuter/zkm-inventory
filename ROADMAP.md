@@ -146,7 +146,7 @@ Shared rules for every item below:
 
 ## Open items (handoff 2026-11-10)
 
-- [ ] [HARD] **INV5 — finddump drive identity by hardware serial** <!-- id:3423 -->
+- [x] [HARD] **INV5 — finddump drive identity by hardware serial** <!-- id:3423 -->
   - **Acceptance**: a drive's `mount:` block accepts an optional `serial:` (the disk's
     `ID_SERIAL_SHORT`). A partition inherits its parent disk's serial. With `serial:` set,
     only partitions on that disk are candidates; `label` (case-insensitive) or `uuid` then
